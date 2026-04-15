@@ -60,7 +60,8 @@ dnf install -y \
     gvfs-mtp \
     gvfs-smb \
     adwaita-icon-theme \
-    adwaita-cursor-theme
+    adwaita-cursor-theme \
+    gnome-backgrounds
 
 log "GNOME 50 installiert"
 
@@ -98,14 +99,18 @@ dnf install -y \
     gnome-shell-extension-dash-to-panel 2>/dev/null || \
     warn "Dash to Panel nicht im Repo — nach GNOME-Start via gnome-extensions-app installieren"
 
-# Resources (System Monitor) — DNF oder COPR
-if ! dnf install -y resources 2>/dev/null; then
-    warn "Resources nicht im Repo — versuche COPR ranfdev/resources..."
-    dnf copr enable -y atim/resources 2>/dev/null && dnf install -y resources || \
-        warn "Resources COPR fehlgeschlagen — manuell: https://apps.gnome.org/Resources/"
-fi
+# Resources (System Monitor)
+dnf copr enable -y atim/resources
+dnf install -y resources
 
 log "Extensions installiert"
+
+# ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
+info "dnf-app-center installieren..."
+dnf copr enable -y gloriouseggroll/nobara-43
+dnf install -y dnf-app-center
+dnf copr disable -y gloriouseggroll/nobara-43
+log "dnf-app-center installiert"
 
 # ── Fastfetch GNOME-Variante ──────────────────────────────────────────────────
 info "Fastfetch für GNOME konfigurieren..."

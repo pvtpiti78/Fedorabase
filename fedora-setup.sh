@@ -4,7 +4,7 @@
 # =============================================================================
 # Ausgangslage: Minimale Fedora 44 TTY-Installation
 # Umfang: DNF5-Tuning, RPM Fusion, akmod-nvidia, Fish, Kitty, Starship,
-#         Fastfetch, Firefox, Steam, ProtonPlus, Heroic, nvidia.conf, gaming.conf
+#         Fastfetch, Firefox, Steam, ProtonPlus, Faugus, LACT, nvidia.conf, gaming.conf
 # =============================================================================
 
 set -euo pipefail
@@ -355,7 +355,7 @@ dnf install -y \
     ffmpeg \
     ffmpeg-libs \
     libva \
-    libva-utils \
+    libva-utils || true
 log "GStreamer + Codecs installiert"
 
 # ── Gaming-Tools ──────────────────────────────────────────────────────────────
@@ -374,9 +374,6 @@ log "LACT installiert"
 
 # ── Gaming Launcher ───────────────────────────────────────────────────────────
 info "Gaming Launcher installieren (ProtonPlus, Faugus)..."
-# Heroic Games Launcher (Flatpak-frei via Copr)
-dnf copr enable -y atim/heroic-games-launcher 2>/dev/null && dnf install -y heroic-games-launcher || \
-    warn "Heroic COPR nicht verfügbar — manuell installieren: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases"
 # ProtonPlus (https://copr.fedorainfracloud.org/coprs/wehagy/protonplus/)
 dnf copr enable -y wehagy/protonplus
 dnf install -y protonplus
@@ -384,7 +381,7 @@ log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── Firefox ───────────────────────────────────────────────────────────────────
 info "Firefox installieren..."
-dnf install -y firefox firefox-langpack-de
+dnf install -y firefox firefox-langpacks
 
 info "Firefox policies.json konfigurieren (kein Telemetry, kein Pocket)..."
 FIREFOX_POLICIES_DIR="/usr/lib64/firefox/distribution"
@@ -434,6 +431,7 @@ cat > "$FIREFOX_POLICIES_DIR/policies.json" << 'EOF'
       "widget.use-xdg-desktop-portal.file-picker":       { "Value": 1,     "Status": "default" },
       "widget.wayland.opaque-region.enabled":            { "Value": false, "Status": "default" },
       "apz.gtk.kinetic_scroll.enabled":                  { "Value": false, "Status": "default" },
+      "intl.locale.requested":                              { "Value": "de,en-US", "Status": "default" },
       "browser.newtabpage.activity-stream.feeds.telemetry": { "Value": false, "Status": "locked" },
       "browser.newtabpage.activity-stream.telemetry":    { "Value": false, "Status": "locked" },
       "browser.ping-centre.telemetry":                   { "Value": false, "Status": "locked" },
