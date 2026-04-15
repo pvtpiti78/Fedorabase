@@ -105,12 +105,6 @@ dnf install -y resources
 
 log "Extensions installiert"
 
-# ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
-info "dnf-app-center installieren..."
-dnf copr enable -y gloriouseggroll/nobara-43
-dnf install -y dnf-app-center
-dnf copr disable -y gloriouseggroll/nobara-43
-log "dnf-app-center installiert"
 
 # ── Fastfetch GNOME-Variante ──────────────────────────────────────────────────
 info "Fastfetch für GNOME konfigurieren..."

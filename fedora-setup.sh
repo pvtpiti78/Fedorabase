@@ -377,9 +377,26 @@ info "Gaming Launcher installieren (ProtonPlus, Faugus)..."
 # ProtonPlus (https://copr.fedorainfracloud.org/coprs/wehagy/protonplus/)
 dnf copr enable -y wehagy/protonplus
 dnf install -y protonplus
+
+# Faugus Launcher
+dnf copr enable -y faugus/faugus-launcher
+dnf install -y faugus-launcher
 log "Gaming Launcher installiert (soweit verfügbar)"
 
+# ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
+info "dnf-app-center installieren..."
+dnf copr enable -y --releasever=43 gloriouseggroll/nobara-43
+dnf install -y dnf-app-center
+dnf copr disable -y gloriouseggroll/nobara-43
+log "dnf-app-center installiert"
+
 # ── Firefox ───────────────────────────────────────────────────────────────────
+# ── Systemsprache Deutsch ─────────────────────────────────────────────────────
+info "Systemsprache auf Deutsch setzen..."
+dnf install -y glibc-langpack-de
+localectl set-locale LANG=de_DE.UTF-8
+log "Systemsprache gesetzt"
+
 info "Firefox installieren..."
 dnf install -y firefox firefox-langpacks
 
