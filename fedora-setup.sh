@@ -86,7 +86,6 @@ dnf install -y \
     unzip \
     p7zip \
     p7zip-plugins \
-    htop \
     btop \
     fastfetch \
     bash-completion \
@@ -124,6 +123,11 @@ dnf install -y \
     kernel-devel \
     kernel-headers
 log "Nvidia-Treiber installiert (akmods baut beim nächsten Boot)"
+
+# ── Terra Repo ────────────────────────────────────────────────────────────────
+info "Terra Repo aktivieren (nach Nvidia — verhindert Treiber-Überschreibung)..."
+dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
+log "Terra Repo aktiviert"
 
 # ── NTSYNC explizit laden ─────────────────────────────────────────────────────
 info "NTSYNC konfigurieren..."
@@ -361,8 +365,15 @@ dnf install -y \
     protontricks
 log "Gaming-Tools installiert"
 
+# ── LACT (Nvidia Undervolting) ────────────────────────────────────────────────
+info "LACT installieren..."
+dnf copr enable -y ilyaz/LACT
+dnf install -y lact
+systemctl enable --now lactd
+log "LACT installiert"
+
 # ── Gaming Launcher ───────────────────────────────────────────────────────────
-info "Gaming Launcher installieren (Heroic, ProtonPlus)..."
+info "Gaming Launcher installieren (ProtonPlus, Faugus)..."
 # Heroic Games Launcher (Flatpak-frei via Copr)
 dnf copr enable -y atim/heroic-games-launcher 2>/dev/null && dnf install -y heroic-games-launcher || \
     warn "Heroic COPR nicht verfügbar — manuell installieren: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases"
@@ -373,7 +384,7 @@ log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── Firefox ───────────────────────────────────────────────────────────────────
 info "Firefox installieren..."
-dnf install -y firefox
+dnf install -y firefox firefox-langpack-de
 
 info "Firefox policies.json konfigurieren (kein Telemetry, kein Pocket)..."
 FIREFOX_POLICIES_DIR="/usr/lib64/firefox/distribution"
