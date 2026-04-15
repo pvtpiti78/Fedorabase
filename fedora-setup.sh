@@ -119,7 +119,7 @@ dnf install -y \
     akmod-nvidia \
     xorg-x11-drv-nvidia-cuda \
     xorg-x11-drv-nvidia-libs.i686 \
-    nvidia-vaapi-driver \
+    libva-nvidia-driver \
     libva-utils \
     kernel-devel \
     kernel-headers
@@ -352,7 +352,6 @@ dnf install -y \
     ffmpeg-libs \
     libva \
     libva-utils \
-    libva-vdpau-driver
 log "GStreamer + Codecs installiert"
 
 # ── Gaming-Tools ──────────────────────────────────────────────────────────────
@@ -525,18 +524,6 @@ EOF
 sysctl --system > /dev/null
 log "sysctl konfiguriert"
 
-# ── Autostart-Services ────────────────────────────────────────────────────────
-info "Services aktivieren..."
-systemctl enable --now pipewire
-systemctl enable --now pipewire-pulse
-systemctl enable --now wireplumber
-log "Services aktiv"
-
-# ── xdg-user-dirs anlegen ─────────────────────────────────────────────────────
-info "Benutzerverzeichnisse anlegen..."
-sudo -u "$CURRENT_USER" xdg-user-dirs-update
-log "Benutzerverzeichnisse angelegt"
-
 # ── Vorlagen (Rechtsklick → Neu erstellen) ────────────────────────────────────
 info "Vorlagen-Verzeichnis anlegen..."
 TEMPLATES_DIR="$USER_HOME/Vorlagen"
@@ -559,6 +546,17 @@ cat > "$TEMPLATES_DIR/Webseite.html" << 'EOF'
 EOF
 chown -R "$CURRENT_USER:$CURRENT_USER" "$TEMPLATES_DIR"
 log "Vorlagen angelegt"
+
+# ── Tastatur auf Deutsch ─────────────────────────────────────────────────────
+info "Tastaturlayout auf Deutsch setzen..."
+localectl set-keymap de
+localectl set-x11-keymap de
+log "Tastaturlayout gesetzt"
+
+# ── Berechtigungen Home-Verzeichnis ──────────────────────────────────────────
+info "Berechtigungen Home-Verzeichnis setzen..."
+chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME"
+log "Berechtigungen gesetzt"
 
 # ── Abschluss ─────────────────────────────────────────────────────────────────
 echo ""
