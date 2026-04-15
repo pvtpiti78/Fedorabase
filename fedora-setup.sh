@@ -385,12 +385,12 @@ dnf install -y faugus-launcher || true
 log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
-info "dnf-app-center installieren (Nobara COPR, F43 Compat)..."
-dnf copr enable -y --releasever=43 gloriouseggroll/nobara-43 2>/dev/null || true
-dnf install -y dnf-app-center 2>/dev/null || \
-    warn "dnf-app-center nicht verfügbar — COPR unterstützt Fedora 44 noch nicht"
-dnf copr disable -y gloriouseggroll/nobara-43 2>/dev/null || true
-log "dnf-app-center Block abgeschlossen"
+info "dnf-app-center installieren..."
+dnf copr enable gloriouseggroll/nobara-43 fedora-43-x86_64
+dnf config-manager setopt copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43.enabled=0
+dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 || \
+    warn "dnf-app-center konnte nicht installiert werden"
+log "dnf-app-center installiert"
 
 # ── Firefox ───────────────────────────────────────────────────────────────────
 # ── Systemsprache Deutsch ─────────────────────────────────────────────────────
@@ -439,6 +439,7 @@ cat > "$FIREFOX_POLICIES_DIR/policies.json" << 'EOF'
       "Locked": false
     },
 
+    "RequestedLocales": ["de", "en-US"],
     "Preferences": {
       "media.ffmpeg.vaapi.enabled":                      { "Value": true,  "Status": "default" },
       "media.rdd-ffmpeg.enabled":                        { "Value": true,  "Status": "default" },
@@ -450,7 +451,6 @@ cat > "$FIREFOX_POLICIES_DIR/policies.json" << 'EOF'
       "widget.use-xdg-desktop-portal.file-picker":       { "Value": 1,     "Status": "default" },
       "widget.wayland.opaque-region.enabled":            { "Value": false, "Status": "default" },
       "apz.gtk.kinetic_scroll.enabled":                  { "Value": false, "Status": "default" },
-      "intl.locale.requested":                              { "Value": "de,en-US", "Status": "default" },
       "browser.newtabpage.activity-stream.feeds.telemetry": { "Value": false, "Status": "locked" },
       "browser.newtabpage.activity-stream.telemetry":    { "Value": false, "Status": "locked" },
       "browser.ping-centre.telemetry":                   { "Value": false, "Status": "locked" },
