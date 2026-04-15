@@ -49,7 +49,6 @@ dnf install -y \
     gnome-shell \
     gnome-session \
     gnome-control-center \
-    gnome-terminal \
     gnome-text-editor \
     gnome-disk-utility \
     gnome-tweaks \
@@ -102,7 +101,7 @@ dnf install -y \
 # Resources (System Monitor) — DNF oder COPR
 if ! dnf install -y resources 2>/dev/null; then
     warn "Resources nicht im Repo — versuche COPR ranfdev/resources..."
-    dnf copr enable -y ranfdev/resources 2>/dev/null && dnf install -y resources || \
+    dnf copr enable -y atim/resources 2>/dev/null && dnf install -y resources || \
         warn "Resources COPR fehlgeschlagen — manuell: https://apps.gnome.org/Resources/"
 fi
 
