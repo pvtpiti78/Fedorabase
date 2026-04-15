@@ -25,6 +25,10 @@ err()  { echo -e "${RED}[✗]${NC} $*"; exit 1; }
 # ── Root-Check ────────────────────────────────────────────────────────────────
 [[ $EUID -ne 0 ]] && err "Bitte als root ausführen: sudo bash fedora-setup.sh"
 
+# ── User-Variablen ────────────────────────────────────────────────────────────
+CURRENT_USER=${SUDO_USER:-$USER}
+USER_HOME=$(eval echo "~$CURRENT_USER")
+
 # ── Banner ────────────────────────────────────────────────────────────────────
 clear
 echo -e "${BOLD}${CYAN}"
@@ -137,9 +141,6 @@ log "NTSYNC aktiviert"
 # ── Fish Shell ────────────────────────────────────────────────────────────────
 info "Fish Shell installieren..."
 dnf install -y fish
-
-CURRENT_USER=${SUDO_USER:-$USER}
-USER_HOME=$(eval echo "~$CURRENT_USER")
 
 chsh -s /usr/bin/fish "$CURRENT_USER"
 
@@ -368,7 +369,7 @@ log "Gaming-Tools installiert"
 # ── LACT (Nvidia Undervolting) ────────────────────────────────────────────────
 info "LACT installieren..."
 dnf copr enable -y ilyaz/LACT
-dnf install -y lact
+dnf install -y lact || true
 systemctl enable --now lactd
 log "LACT installiert"
 
@@ -376,19 +377,20 @@ log "LACT installiert"
 info "Gaming Launcher installieren (ProtonPlus, Faugus)..."
 # ProtonPlus (https://copr.fedorainfracloud.org/coprs/wehagy/protonplus/)
 dnf copr enable -y wehagy/protonplus
-dnf install -y protonplus
+dnf install -y protonplus || true
 
 # Faugus Launcher
 dnf copr enable -y faugus/faugus-launcher
-dnf install -y faugus-launcher
+dnf install -y faugus-launcher || true
 log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
-info "dnf-app-center installieren..."
-dnf copr enable -y --releasever=43 gloriouseggroll/nobara-43
-dnf install -y dnf-app-center
-dnf copr disable -y gloriouseggroll/nobara-43
-log "dnf-app-center installiert"
+info "dnf-app-center installieren (Nobara COPR, F43 Compat)..."
+dnf copr enable -y --releasever=43 gloriouseggroll/nobara-43 2>/dev/null || true
+dnf install -y dnf-app-center 2>/dev/null || \
+    warn "dnf-app-center nicht verfügbar — COPR unterstützt Fedora 44 noch nicht"
+dnf copr disable -y gloriouseggroll/nobara-43 2>/dev/null || true
+log "dnf-app-center Block abgeschlossen"
 
 # ── Firefox ───────────────────────────────────────────────────────────────────
 # ── Systemsprache Deutsch ─────────────────────────────────────────────────────
