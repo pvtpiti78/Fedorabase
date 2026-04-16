@@ -386,7 +386,7 @@ log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
 info "dnf-app-center installieren..."
-dnf copr enable gloriouseggroll/nobara-43 fedora-43-x86_64
+dnf copr enable -y gloriouseggroll/nobara-43 fedora-43-x86_64
 dnf config-manager setopt copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43.enabled=0
 dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 || \
     warn "dnf-app-center konnte nicht installiert werden"

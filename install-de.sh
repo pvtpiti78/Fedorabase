@@ -55,13 +55,16 @@ echo -e "  │  ${BOLD}[2]${NC}  🔵  ${BOLD}KDE Plasma 6.6${NC}               
 echo -e "  │       Wayland · Plasma Login Manager            │"
 echo -e "  │       Minimal (14 Pakete)                       │"
 echo -e "  │                                                 │"
-echo -e "  │  ${BOLD}[q]${NC}  Abbrechen                                  │"
+echo -e "  │  ${BOLD}[3]${NC}  🚀  ${BOLD}COSMIC${NC}                                │
+  echo -e "  │       cosmic-greeter · Wayland · Nvidia         │"
+  echo -e "  │                                                 │"
+  echo -e "  │  ${BOLD}[q]${NC}  Abbrechen                                  │""
 echo -e "  │                                                 │"
 echo -e "  └─────────────────────────────────────────────────┘"
 echo ""
 
 while true; do
-    read -rp "  Auswahl [1/2/q]: " CHOICE
+    read -rp "  Auswahl [1/2/3/q]: " CHOICE
     case "$CHOICE" in
         1)
             echo ""
@@ -82,6 +85,17 @@ while true; do
                 bash "$SCRIPT_DIR/kde-setup.sh"
             else
                 err "kde-setup.sh nicht gefunden in $SCRIPT_DIR"
+            fi
+            break
+            ;;
+        3)
+            echo ""
+            info "COSMIC gewählt"
+            echo ""
+            if [[ -f "$SCRIPT_DIR/cosmic-setup.sh" ]]; then
+                bash "$SCRIPT_DIR/cosmic-setup.sh"
+            else
+                err "cosmic-setup.sh nicht gefunden in $SCRIPT_DIR"
             fi
             break
             ;;
