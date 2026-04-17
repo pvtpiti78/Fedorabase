@@ -70,7 +70,7 @@ dnf install -y plasma-login-manager 2>/dev/null || {
     log "SDDM aktiviert (Fallback)"
     return
 }
-systemctl enable plasma-login-manager 2>/dev/null || systemctl enable sddm
+systemctl enable plasmalogin 2>/dev/null || systemctl enable sddm
 systemctl set-default graphical.target
 log "Plasma Login Manager aktiviert"
 
