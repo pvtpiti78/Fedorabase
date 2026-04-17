@@ -392,16 +392,16 @@ dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:glorio
     warn "dnf-app-center konnte nicht installiert werden"
 log "dnf-app-center installiert"
 
-# ── Floorp Browser ────────────────────────────────────────────────────────────
-info "Floorp installieren (COPR lovecraftiangodskiller/floorp)..."
-dnf copr enable -y sneexy/floorp
-dnf install -y floorp
-log "Floorp installiert"
+# ── ZEN Browser ────────────────────────────────────────────────────────────
+info "Zen installieren (COPR sneexy/zen-browser)..."
+dnf copr enable -y sneexy/zen-browser
+dnf install -y zen-browser
+log "Zen installiert"
 
-info "Floorp policies.json konfigurieren..."
-FLOORP_POLICIES_DIR="/opt/floorp/distribution"
-mkdir -p "$FLOORP_POLICIES_DIR"
-cat > "$FLOORP_POLICIES_DIR/policies.json" << 'EOF'
+info "Zen policies.json konfigurieren..."
+ZEN_POLICIES_DIR="/opt/zen/distribution"
+mkdir -p "$ZEN_POLICIES_DIR"
+cat > "$ZEN_POLICIES_DIR/policies.json" << 'EOF'
 {
   "policies": {
     "DisableTelemetry": true,
@@ -457,7 +457,7 @@ cat > "$FLOORP_POLICIES_DIR/policies.json" << 'EOF'
   }
 }
 EOF
-log "Floorp konfiguriert"
+log "ZEN konfiguriert"
 
 
 # ── nvidia.conf ───────────────────────────────────────────────────────────────
