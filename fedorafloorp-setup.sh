@@ -394,12 +394,12 @@ log "dnf-app-center installiert"
 
 # ── Floorp Browser ────────────────────────────────────────────────────────────
 info "Floorp installieren (COPR lovecraftiangodskiller/floorp)..."
-dnf copr enable -y lovecraftiangodskiller/floorp
+dnf copr enable -y sneexy/floorp
 dnf install -y floorp
 log "Floorp installiert"
 
 info "Floorp policies.json konfigurieren..."
-FLOORP_POLICIES_DIR="/usr/lib64/floorp/distribution"
+FLOORP_POLICIES_DIR="/opt/floorp/distribution"
 mkdir -p "$FLOORP_POLICIES_DIR"
 cat > "$FLOORP_POLICIES_DIR/policies.json" << 'EOF'
 {
