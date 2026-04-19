@@ -74,6 +74,11 @@ dnf install -y \
 dnf config-manager setopt fedora-cisco-openh264.enabled=1
 log "RPM Fusion aktiviert"
 
+# ── ffmpeg-free → ffmpeg (RPM Fusion) ────────────────────────────────────────
+info "ffmpeg-free gegen vollwertiges ffmpeg tauschen..."
+dnf swap -y ffmpeg-free ffmpeg --allowerasing
+log "ffmpeg getauscht"
+
 # ── Flatpak deaktivieren ──────────────────────────────────────────────────────
 info "Flatpak deaktivieren und entfernen..."
 dnf remove -y flatpak flatpak-libs 2>/dev/null || true
@@ -386,12 +391,9 @@ log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
 info "dnf-app-center installieren..."
-# Nobara-43 COPR, manuell für F44 eingebunden (kein nativer F44-Build vorhanden)
 dnf copr enable -y gloriouseggroll/nobara-43 fedora-43-x86_64
 dnf config-manager setopt copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43.enabled=0
-dnf install -y dnf-app-center \
-    --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 \
-    --releasever=43 || \
+dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 || \
     warn "dnf-app-center konnte nicht installiert werden"
 log "dnf-app-center installiert"
 
