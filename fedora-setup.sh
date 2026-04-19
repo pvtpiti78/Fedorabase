@@ -470,15 +470,6 @@ EOF
 
 log "Firefox installiert und konfiguriert"
 
-# ── nvidia.conf ───────────────────────────────────────────────────────────────
-info "nvidia.conf (Gaming-ENV) erstellen..."
-cat > /etc/modprobe.d/nvidia.conf << 'EOF'
-# Nvidia — Fedora 44
-options nvidia NVreg_UsePageAttributeTable=1
-options nvidia NVreg_EnablePCIeGen3=1
-options nvidia NVreg_RegistryDwords="PerfLevelSrc=0x2222"
-EOF
-
 # ── gaming.conf (Environment Variables) ──────────────────────────────────────
 info "gaming.conf (Systemd Environment) erstellen..."
 mkdir -p /etc/environment.d
@@ -537,7 +528,7 @@ ENABLE_HDR_WSI=1
 DXVK_NVAPI_SET_NGX_DEBUG_OPTIONS="DLSSIndicator=1024,DLSSGIndicator=2"
 EOF
 
-log "nvidia.conf und gaming.conf erstellt"
+log "gaming.conf erstellt"
 
 # ── nvidia.conf ENV (Wayland/Vulkan) ─────────────────────────────────────────
 info "nvidia.conf ENV erstellen..."
