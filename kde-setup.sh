@@ -59,18 +59,10 @@ dnf install -y \
 
 log "KDE Plasma 6.6 installiert"
 
-# ── Plasma Login Manager (kein SDDM) ─────────────────────────────────────────
+# ── Plasma Login Manager ──────────────────────────────────────────────────────
 info "Plasma Login Manager aktivieren (F44 Standard für KDE)..."
-dnf install -y plasma-login-manager 2>/dev/null || {
-    # Fallback: SDDM falls plasma-login-manager noch nicht im Repo
-    warn "plasma-login-manager nicht gefunden — SDDM als Fallback"
-    dnf install -y sddm
-    systemctl enable sddm
-    systemctl set-default graphical.target
-    log "SDDM aktiviert (Fallback)"
-    return
-}
-systemctl enable plasmalogin 2>/dev/null || systemctl enable sddm
+dnf install -y plasma-login-manager kcm-plasmalogin
+systemctl enable --force plasmalogin.service
 systemctl set-default graphical.target
 log "Plasma Login Manager aktiviert"
 

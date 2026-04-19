@@ -78,7 +78,7 @@ sudo bash cosmic-setup.sh
 | **LACT** | NVIDIA undervolting/overclocking via COPR ilyaz/LACT |
 | **ProtonPlus** | GE-Proton manager via COPR wehagy/protonplus |
 | **Faugus Launcher** | Game launcher via COPR faugus/faugus-launcher |
-| **dnf-app-center** | App store + extension manager via Nobara COPR |
+| **dnf-app-center** | App store + extension manager via Nobara COPR (F43-Build, manuell für F44 geladen via --releasever=43) |
 | **Firefox** | + langpacks, no telemetry, no Pocket, hardware decoding, German UI |
 | **nvidia.conf** | modprobe options (PAT, PCIe Gen3) |
 | **gaming.conf** | Full DXVK/DLSS/MFG/NTSYNC/HDR/VRR environment |
@@ -101,6 +101,8 @@ Dynamic MFG          — up to 5x frame generation, target 240 FPS
 NTSYNC               — native kernel NT sync (no esync/fsync)
 HDR                  — DXVK + Proton HDR enabled
 VRR                  — fullscreen only (prevents gamma flicker on OLED)
+VKD3D Heap           — PROTON_VKD3D_HEAP=1 aktiv; descriptor_heap-Codepfad
+                       per Spiel aktivierbar via VKD3D_CONFIG=descriptor_heap
 ```
 
 ---
@@ -121,7 +123,7 @@ VRR                  — fullscreen only (prevents gamma flicker on OLED)
 
 ### KDE Plasma 6.6
 - Wayland
-- Plasma Login Manager (replaces SDDM in F44)
+- Plasma Login Manager (`plasma-login-manager` + `kcm-plasmalogin`, Service: `plasmalogin.service`) — F44-Standard, ersetzt SDDM
 - Minimal: plasma-desktop, dolphin, kate, ark, kscreen, bluedevil, powerdevil
 
 ### COSMIC

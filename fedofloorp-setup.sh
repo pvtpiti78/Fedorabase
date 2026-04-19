@@ -386,9 +386,12 @@ log "Gaming Launcher installiert (soweit verfügbar)"
 
 # ── dnf-app-center (App Store + Extension Manager) ───────────────────────────
 info "dnf-app-center installieren..."
+# Nobara-43 COPR, manuell für F44 eingebunden (kein nativer F44-Build vorhanden)
 dnf copr enable -y gloriouseggroll/nobara-43 fedora-43-x86_64
 dnf config-manager setopt copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43.enabled=0
-dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 || \
+dnf install -y dnf-app-center \
+    --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-43 \
+    --releasever=43 || \
     warn "dnf-app-center konnte nicht installiert werden"
 log "dnf-app-center installiert"
 
@@ -444,6 +447,12 @@ PROTON_ENABLE_WAYLAND=1
 PROTON_ENABLE_NVAPI=1
 PROTON_VKD3D_HEAP=1
 PROTON_USE_NTSYNC=1
+
+### VKD3D — Descriptor Heap (neuer Codepfad, experimental seit cachyos-10.0-20260409-slr)
+# Aktivieren nur in Kombination — beide Vars werden benötigt:
+# VKD3D_CONFIG=descriptor_heap
+# PROTON_VKD3D_HEAP=1  ← bereits gesetzt
+# Einzeln per Spielstart setzen, nicht global (bricht Titel die Legacy-Pfad erwarten)
 
 ### NTSYNC — kein esync/fsync
 WINEFSYNC=0
