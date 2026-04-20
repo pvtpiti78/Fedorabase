@@ -71,33 +71,6 @@ COSMIC_DATA_CONTROL_ENABLED=1
 EOF
 log "COSMIC ENV konfiguriert"
 
-# ── Fastfetch für COSMIC ──────────────────────────────────────────────────────
-info "Fastfetch konfigurieren..."
-mkdir -p "$USER_HOME/.config/fastfetch"
-cat > "$USER_HOME/.config/fastfetch/config.jsonc" << 'EOF'
-{
-  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-  "logo": {
-    "source": "fedora",
-    "padding": { "right": 2 }
-  },
-  "modules": [
-    "title", "separator",
-    { "type": "os",      "key": "OS      " },
-    { "type": "kernel",  "key": "Kernel  " },
-    { "type": "de",      "key": "DE      " },
-    { "type": "wm",      "key": "WM      " },
-    { "type": "shell",   "key": "Shell   " },
-    { "type": "cpu",     "key": "CPU     " },
-    { "type": "gpu",     "key": "GPU     " },
-    { "type": "memory",  "key": "RAM     " },
-    { "type": "disk",    "key": "Disk    " },
-    { "type": "uptime",  "key": "Uptime  " }
-  ]
-}
-EOF
-chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME/.config/fastfetch"
-log "Fastfetch konfiguriert"
 
 # ── Abschluss ─────────────────────────────────────────────────────────────────
 echo ""
