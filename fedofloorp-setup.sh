@@ -4,7 +4,7 @@
 # =============================================================================
 # Ausgangslage: Minimale Fedora 44 TTY-Installation
 # Umfang: DNF5-Tuning, RPM Fusion, akmod-nvidia, Fish, Kitty, Starship,
-#         Fastfetch, Floorp, Steam, ProtonPlus, Faugus, LACT, nvidia.conf, gaming.conf
+#         Fastfetch, Floorp, Steam, ProtonPlus, Faugus, LACT, gaming.conf
 # =============================================================================
 
 set -euo pipefail
@@ -115,6 +115,87 @@ dnf install -y \
     hunspell-de \
     hunspell-en-US
 log "Basis-Pakete installiert"
+
+# ── Fastfetch Config ──────────────────────────────────────────────────────────
+info "Fastfetch config schreiben..."
+mkdir -p "$USER_HOME/.config/fastfetch"
+cat > "$USER_HOME/.config/fastfetch/config.jsonc" <<'EOF'
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "builtin",
+        "source": "fedora"
+    },
+    "display": {
+        "separator": "  "
+    },
+    "modules": [
+        "title",
+        "separator",
+        {
+            "type": "os",
+            "key": "OS"
+        },
+        {
+            "type": "kernel",
+            "key": "Kernel"
+        },
+        {
+            "type": "uptime",
+            "key": "Uptime"
+        },
+        {
+            "type": "packages",
+            "key": "Packages"
+        },
+        "separator",
+        {
+            "type": "shell",
+            "key": "Shell"
+        },
+        {
+            "type": "terminal",
+            "key": "Terminal"
+        },
+        {
+            "type": "de",
+            "key": "DE/WM"
+        },
+        "separator",
+        {
+            "type": "display",
+            "key": "Resolution"
+        },
+        "separator",
+        {
+            "type": "cpu",
+            "key": "CPU"
+        },
+        {
+            "type": "gpu",
+            "key": "GPU",
+            "driverSpecific": true,
+            "format": "{name} [{driver}]"
+        },
+        {
+            "type": "memory",
+            "key": "RAM"
+        },
+        {
+            "type": "disk",
+            "key": "Disk",
+            "folders": "/"
+        },
+        "separator",
+        {
+            "type": "localip",
+            "key": "Local IP"
+        }
+    ]
+}
+EOF
+chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME/.config/fastfetch/config.jsonc"
+log "Fastfetch config geschrieben"
 
 # ── power-profiles-daemon ─────────────────────────────────────────────────────
 info "power-profiles-daemon aktivieren..."
@@ -478,24 +559,11 @@ PROTON_ENABLE_HDR=1
 ENABLE_HDR_WSI=1
 
 ### Debug (DLSS + DLSSG Indicator)
-DXVK_NVAPI_SET_NGX_DEBUG_OPTIONS="DLSSIndicator=1024,DLSSGIndicator=2"
+# DXVK_NVAPI_SET_NGX_DEBUG_OPTIONS="DLSSIndicator=1024,DLSSGIndicator=2"
 EOF
 
 log "gaming.conf erstellt"
 
-# ── nvidia.conf ENV (Wayland/Vulkan) ─────────────────────────────────────────
-info "nvidia.conf ENV erstellen..."
-cat > /etc/environment.d/nvidia.conf << 'EOF'
-GBM_BACKEND=nvidia-drm
-__GLX_VENDOR_LIBRARY_NAME=nvidia
-LIBVA_DRIVER_NAME=nvidia
-NVD_BACKEND=direct
-ELECTRON_OZONE_PLATFORM_HINT=auto
-
-# Hardware-Decoding Floorp
-MOZ_DISABLE_RDD_SANDBOX=1
-EOF
-log "nvidia.conf ENV erstellt"
 
 # ── sysctl tweaks ─────────────────────────────────────────────────────────────
 info "sysctl vm.max_map_count setzen (Steam/Wine)..."
