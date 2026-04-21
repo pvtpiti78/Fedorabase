@@ -564,6 +564,14 @@ EOF
 
 log "gaming.conf erstellt"
 
+# ── nvidia.conf ENV ───────────────────────────────────────────────────────────
+info "nvidia.conf ENV erstellen..."
+cat > /etc/environment.d/nvidia.conf << 'EOF'
+LIBVA_DRIVER_NAME=nvidia
+NVD_BACKEND=direct
+MOZ_DISABLE_RDD_SANDBOX=1
+EOF
+log "nvidia.conf ENV erstellt"
 
 # ── sysctl tweaks ─────────────────────────────────────────────────────────────
 info "sysctl vm.max_map_count setzen (Steam/Wine)..."
