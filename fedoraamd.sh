@@ -91,6 +91,7 @@ dnf install -y \
     git \
     curl \
     wget \
+    tar \
     unzip \
     p7zip \
     p7zip-plugins \
