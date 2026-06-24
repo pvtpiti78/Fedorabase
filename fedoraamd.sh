@@ -129,8 +129,7 @@ dnf install -y \
     mesa-vulkan-drivers.i686 \
     vulkan-loader \
     vulkan-tools \
-    libva-mesa-driver \
-    mesa-vdpau-drivers \
+    mesa-va-drivers \
     libva-utils
 log "Mesa/Vulkan-Stack installiert (amdgpu bereits im Kernel aktiv)"
 
