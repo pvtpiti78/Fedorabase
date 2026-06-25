@@ -55,6 +55,7 @@ dnf install -y \
     ark \
     xdg-desktop-portal-kde \
     polkit-kde \
+    pam-kwallet \
     bluedevil \
     powerdevil
 
