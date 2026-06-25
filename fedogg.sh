@@ -296,14 +296,6 @@ dnf copr enable -y faugus/faugus-launcher
 dnf install -y faugus-launcher || true
 log "Gaming Launcher installiert"
 
-# ── dnf-app-center ────────────────────────────────────────────────────────────
-info "dnf-app-center aus Nobara 44 installieren..."
-dnf copr enable -y gloriouseggroll/nobara-44 fedora-44-x86_64
-dnf config-manager setopt copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-44.enabled=0
-dnf install -y dnf-app-center --enablerepo=copr:copr.fedorainfracloud.org:gloriouseggroll:nobara-44 || \
-    warn "dnf-app-center konnte nicht installiert werden"
-log "dnf-app-center installiert"
-
 # ── Systemsprache & Google Chrome ─────────────────────────────────────────────
 info "Systemsprache auf Deutsch setzen..."
 dnf install -y glibc-langpack-de
