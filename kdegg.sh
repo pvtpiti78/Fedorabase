@@ -1,9 +1,9 @@
 #!/bin/bash
 # =============================================================================
-# kde-setup.sh — Fedora 44 KDE Plasma 6.6 Setup (AMD Edition)
+# kde-setup.sh — Fedora 44 KDE Plasma 6.7 Setup (AMD Edition)
 # =============================================================================
 # Voraussetzung: fedora-setup.sh wurde ausgeführt
-# Umfang: Minimales KDE Plasma 6.6, Plasma Login Manager, MTP-Support
+# Umfang: Minimales KDE Plasma 6.7, Plasma Login Manager, MTP-Support
 # =============================================================================
 
 set -euo pipefail
@@ -119,8 +119,8 @@ cat > "$USER_HOME/.config/fastfetch/config.jsonc" <<'EOF'
 EOF
 chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME/.config/fastfetch/config.jsonc"
 
-# ── KDE Plasma 6.6 — minimale Pakete + MTP ───────────────────────────────────
-info "KDE Plasma 6.6 (minimal) installieren..."
+# ── KDE Plasma 6.7 — minimale Pakete + MTP ───────────────────────────────────
+info "KDE Plasma 6.7 (minimal) installieren..."
 dnf install -y \
     plasma-desktop \
     plasma-workspace \
@@ -138,7 +138,7 @@ dnf install -y \
     bluedevil \
     powerdevil
 
-log "KDE Plasma 6.6 und kio-extras (MTP-Support) installiert"
+log "KDE Plasma 6.7 und kio-extras (MTP-Support) installiert"
 
 # ── Plasma Login Manager ──────────────────────────────────────────────────────
 info "Plasma Login Manager aktivieren (F44 Standard für KDE)..."
@@ -150,7 +150,7 @@ log "Plasma Login Manager aktiviert"
 # ── Abschluss ─────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}════════════════════════════════════════════${NC}"
-echo -e "${BOLD}${GREEN}  KDE Plasma 6.6 Setup abgeschlossen!${NC}"
+echo -e "${BOLD}${GREEN}  KDE Plasma 6.7 Setup abgeschlossen!${NC}"
 echo -e "${BOLD}${GREEN}════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${CYAN}System neu starten:${NC}  ${BOLD}sudo reboot${NC}"
