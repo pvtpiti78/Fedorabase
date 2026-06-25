@@ -91,8 +91,10 @@ dnf install -y \
     hunspell hunspell-de hunspell-en-US \
     mesa-vulkan-drivers mesa-vulkan-drivers.i686 \
     vulkan-loader vulkan-loader.i686 \
-    mesa-va-drivers mesa-va-drivers.i686 \
-    mesa-vdpau mesa-vdpau.i686
+    mesa-va-drivers
+
+info "Erweiterte VA-API Codecs für AMD installieren..."
+dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld --allowerasing || true
 log "Basis-Pakete und AMD-Treiber installiert"
 
 # ── power-profiles-daemon ─────────────────────────────────────────────────────
