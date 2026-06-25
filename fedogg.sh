@@ -85,7 +85,7 @@ log "Flatpak entfernt"
 # ── Basis-Pakete & AMD Treiber ────────────────────────────────────────────────
 info "Basis-Pakete und Mesa (AMD Vulkan/VA-API) installieren..."
 dnf install -y \
-    git curl wget unzip p7zip p7zip-plugins btop fastfetch bash-completion \
+    git tar curl wget unzip p7zip p7zip-plugins btop fastfetch bash-completion \
     pciutils usbutils lshw rsync vim nano man-db xdg-utils xdg-user-dirs \
     pipewire pipewire-pulseaudio wireplumber power-profiles-daemon \
     hunspell hunspell-de hunspell-en-US \
