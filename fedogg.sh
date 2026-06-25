@@ -102,11 +102,6 @@ info "power-profiles-daemon aktivieren..."
 systemctl enable --now power-profiles-daemon
 log "power-profiles-daemon aktiv"
 
-# ── Terra Repo ────────────────────────────────────────────────────────────────
-info "Terra Repo aktivieren..."
-dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
-log "Terra Repo aktiviert"
-
 # ── NTSYNC explizit laden ─────────────────────────────────────────────────────
 info "NTSYNC konfigurieren..."
 echo "ntsync" > /etc/modules-load.d/ntsync.conf
