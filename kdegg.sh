@@ -47,7 +47,7 @@ cat > "$USER_HOME/.config/fastfetch/config.jsonc" <<'EOF'
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
     "logo": {
         "type": "builtin",
-        "source": "debian"
+        "source": "fedora"
     },
     "display": {
         "separator": "  "
