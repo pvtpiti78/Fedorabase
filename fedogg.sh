@@ -282,6 +282,31 @@ dnf install -y lact || true
 systemctl enable --now lactd
 log "LACT installiert"
 
+# ── scx-scheds (sched-ext Scheduler) ──────────────────────────────────────────
+info "scx-scheds installieren (sched-ext Scheduler, CachyOS-Addons COPR)..."
+dnf copr enable -y bieszczaders/kernel-cachyos-addons
+dnf install -y scx-scheds
+systemctl enable --now scx_loader
+log "scx-scheds installiert (scx_loader aktiv, Default: scx_lavd --autopilot)"
+
+# ── falcond + falcond-gui (Per-Game Performance Daemon) ───────────────────────
+info "falcond + falcond-gui installieren (gloriouseggroll/nobara-44 COPR)..."
+warn "Achtung: nobara-44 ist Nobaras kompletter Paketbestand — wird auf includepkgs gescoped"
+dnf copr enable -y gloriouseggroll/nobara-44
+
+FALCOND_REPO_FILE=$(grep -l "nobara-44" /etc/yum.repos.d/*.repo 2>/dev/null | head -n1)
+if [[ -n "$FALCOND_REPO_FILE" ]]; then
+    sed -i '/^\[/a includepkgs=falcond,falcond-gui,falcond-profiles' "$FALCOND_REPO_FILE"
+    log "nobara-44 COPR auf falcond/falcond-gui/falcond-profiles gescoped"
+else
+    warn "nobara-44 Repo-Datei nicht gefunden — includepkgs-Scoping übersprungen, COPR bleibt ungescoped!"
+fi
+
+dnf install -y falcond falcond-gui || warn "falcond konnte nicht installiert werden"
+systemctl enable --now falcond || true
+log "falcond + falcond-gui installiert"
+warn "Hinweis: falcond nicht zusammen mit Feral GameMode / Falcon GameMode nutzen (Konflikt)"
+
 # ── Gaming Launcher ───────────────────────────────────────────────────────────
 info "Gaming Launcher installieren (ProtonPlus, Faugus)..."
 dnf copr enable -y wehagy/protonplus
@@ -309,7 +334,6 @@ mkdir -p /etc/environment.d
 cat > /etc/environment.d/gaming.conf << 'EOF'
 ### Proton / Wayland
 PROTON_ENABLE_WAYLAND=1
-PROTON_VKD3D_HEAP=1
 PROTON_USE_NTSYNC=1
 PROTON_USE_OPTISCALER=1
 PROTON_XESS_UPGRADE=1
@@ -336,9 +360,13 @@ EOF
 log "gaming.conf erstellt"
 
 # ── sysctl tweaks ─────────────────────────────────────────────────────────────
-info "sysctl vm.max_map_count setzen (Steam/Wine)..."
+info "sysctl tweaks setzen (Steam/Wine, Splitlock, Swappiness)..."
 cat > /etc/sysctl.d/99-gaming.conf << 'EOF'
 vm.max_map_count=2147483642
+vm.swappiness=10
+
+# Disable Split Lock Mitigation, since it can hurt performance in quite a bunch of games
+kernel.split_lock_mitigate=0
 EOF
 sysctl --system > /dev/null
 log "sysctl konfiguriert"
