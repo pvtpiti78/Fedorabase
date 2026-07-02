@@ -83,14 +83,18 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   plasma-workspace-wayland \
   plasma-nm \
   plasma-pa \
+  plasma-systemsettings \
   plasma-systemmonitor \
+  powerdevil \
   kscreen \
   kwallet-pam \
   bluedevil \
+  bluez \
   plasma-login-manager \
   kcm-plasmalogin \
   konsole \
   dolphin \
+  kate \
   kio-extras \
   ark \
   spectacle \
