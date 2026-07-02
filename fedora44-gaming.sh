@@ -86,6 +86,8 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   plasma-systemsettings \
   plasma-systemmonitor \
   powerdevil \
+  power-profiles-daemon \
+  upower \
   kscreen \
   kwallet-pam \
   bluedevil \
@@ -113,6 +115,8 @@ sudo dnf group install -y fonts || warn "Font-Gruppe nicht installierbar — pru
 sudo dnf group install -y hardware-support || warn "hardware-support-Gruppe uebersprungen."
 
 sudo systemctl enable --force plasmalogin.service
+sudo systemctl enable power-profiles-daemon.service || warn "power-profiles-daemon nicht aktivierbar."
+sudo systemctl enable upower.service || warn "upower nicht aktivierbar."
 sudo systemctl set-default graphical.target
 log "Plasma minimal + Plasma Login Manager installiert, graphical.target gesetzt."
 
@@ -208,6 +212,32 @@ sudo flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus-Flatpa
 log "Steam, Protontricks, ProtonPlus installiert."
 
 # ============================================================================
+# 8b. Heroic + Faugus Launcher (nativ, kein Flatpak)
+# ============================================================================
+info "Installiere Heroic Games Launcher (COPR atim/heroic-games-launcher)..."
+if sudo dnf copr enable -y atim/heroic-games-launcher && \
+   sudo dnf install -y heroic-games-launcher-bin; then
+  log "Heroic (nativ) installiert — Updates laufen ueber dnf mit."
+else
+  warn "COPR fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
+  HEROIC_URL=$(curl -s https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest \
+    | grep -oP '"browser_download_url":\s*"\K[^"]*x86_64\.rpm' | head -n1)
+  if [[ -n "${HEROIC_URL:-}" ]]; then
+    sudo dnf install -y "$HEROIC_URL" && log "Heroic via GitHub-RPM installiert."
+  else
+    warn "Heroic-RPM nicht gefunden — manuell nachinstallieren."
+  fi
+fi
+
+info "Installiere Faugus Launcher (offizielles COPR faugus/faugus-launcher)..."
+sudo dnf copr enable -y faugus/faugus-launcher && \
+  sudo dnf install -y faugus-launcher || warn "Faugus Launcher fehlgeschlagen."
+# Hinweis: zieht umu-launcher automatisch mit.
+# Runner-Pfad: ~/.local/share/Steam/compatibilitytools.d/ (Proton-GE via ProtonPlus
+# wird also von Faugus direkt gefunden).
+log "Launcher-Sektion abgeschlossen."
+
+# ============================================================================
 # 9. Google Chrome
 # ============================================================================
 info "Installiere Google Chrome..."
@@ -252,6 +282,7 @@ sudo tee /etc/profile.d/gaming.sh >/dev/null <<'EOF'
 export MESA_SHADER_CACHE_MAX_SIZE=12G
 export PROTON_ENABLE_HDR=1
 export PROTON_USE_OPTISCALER=1
+export PROTON_FSR4_UPGRADE=1
 export PROTON_XESS_UPGRADE=1
 export PROTON_ENABLE_WAYLAND=1
 EOF
