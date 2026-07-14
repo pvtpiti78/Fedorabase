@@ -291,7 +291,67 @@ sudo systemctl enable fstrim.timer || warn "fstrim.timer nicht aktivierbar."
 log "sysctl, ZRAM, Env-Variablen, fstrim gesetzt."
 
 # ============================================================================
-# 12. Optional: scx-Scheduler (auskommentiert — bei Bedarf aktivieren)
+# 12. Firewall (firewalld — auf Minimal-Install nicht garantiert vorhanden)
+# ============================================================================
+info "Richte firewalld ein..."
+sudo dnf install -y firewalld
+sudo systemctl enable --now firewalld || warn "firewalld nicht startbar — nach Reboot pruefen."
+# Default-Zone: public (restriktiv, nur dhcpv6-client + ssh offen).
+# Fuer Desktop ohne SSH-Server kann ssh raus:
+sudo firewall-cmd --permanent --zone=public --remove-service=ssh 2>/dev/null || true
+# Steam Local Network Game Transfer — bei Bedarf einkommentieren:
+# sudo firewall-cmd --permanent --add-port=27040/tcp
+# sudo firewall-cmd --permanent --add-port=27036/udp
+sudo firewall-cmd --reload 2>/dev/null || true
+log "firewalld aktiv (Zone: public, dicht bis auf DHCPv6)."
+
+# ============================================================================
+# 13. Fish Shell + Abbreviations (DNF + Flatpak)
+# ============================================================================
+info "Installiere Fish Shell..."
+sudo dnf install -y fish
+sudo chsh -s /usr/bin/fish "$USER" || warn "Default-Shell nicht gesetzt — manuell: chsh -s /usr/bin/fish"
+
+mkdir -p "$HOME/.config/fish"
+tee "$HOME/.config/fish/config.fish" >/dev/null <<'EOF'
+# ---------------------------------------------------------------
+# Fish-Konfiguration — Fedora 44 Gaming
+# Abbreviations statt Aliase: expandieren sichtbar in der Zeile,
+# bleiben editierbar und landen sauber in der History.
+# ---------------------------------------------------------------
+if status is-interactive
+    set -g fish_greeting  # Begruessung aus
+
+    # --- Update: DNF + Flatpak in einem Rutsch ---
+    abbr -a up   'sudo dnf upgrade --refresh; and flatpak update -y'
+
+    # --- DNF-Basics ---
+    abbr -a in   'sudo dnf install'
+    abbr -a rem  'sudo dnf remove'
+    abbr -a se   'dnf search'
+    abbr -a inf  'dnf info'
+    abbr -a li   'dnf list --installed'
+    abbr -a hist 'dnf history'
+    abbr -a wp   'dnf provides'          # welches Paket liefert Datei X
+
+    # --- Aufraeumen: DNF + Flatpak ---
+    abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages; and flatpak uninstall --unused -y'
+
+    # --- Flatpak ---
+    abbr -a fin  'flatpak install flathub'
+    abbr -a fse  'flatpak search'
+    abbr -a frem 'flatpak uninstall'
+    abbr -a fli  'flatpak list --app'
+
+    # --- COPR ---
+    abbr -a copron  'sudo dnf copr enable'
+    abbr -a coproff 'sudo dnf copr disable'
+end
+EOF
+log "Fish installiert, als Default-Shell gesetzt, Abbreviations geschrieben."
+
+# ============================================================================
+# 14. Optional: scx-Scheduler (auskommentiert — bei Bedarf aktivieren)
 # ============================================================================
 # COPR bieszczaders/kernel-cachyos-addons liefert scx-scheds fuer Fedora.
 # sudo dnf copr enable -y bieszczaders/kernel-cachyos-addons
@@ -300,7 +360,7 @@ log "sysctl, ZRAM, Env-Variablen, fstrim gesetzt."
 # alternativ direkt per systemd-Service starten (scx.service, /etc/default/scx).
 
 # ============================================================================
-# 13. Aufraeumen + Abschluss
+# 15. Aufraeumen + Abschluss
 # ============================================================================
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
@@ -312,4 +372,5 @@ log "   1. reboot  ->  Plasma Login Manager / Plasma (Wayland)"
 log "   2. vainfo  ->  H264/HEVC unter VAEntrypointVLD pruefen"
 log "   3. Steam starten, Proton-GE via ProtonPlus ziehen"
 log "   4. LACT: -70 mV / PL -25% setzen"
+log "   5. Neues Terminal = Fish. 'up' tippen -> expandiert zum Update-Befehl"
 log "============================================="
