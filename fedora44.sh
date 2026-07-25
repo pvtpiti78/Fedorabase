@@ -25,6 +25,13 @@ FEDORA_VER=$(rpm -E %fedora)
 info "Fedora $FEDORA_VER erkannt. Los geht's."
 
 # ============================================================================
+# 0. DNF-Metadaten frisch ziehen
+# ============================================================================
+info "Bereinige DNF-Metadaten-Cache und baue neu..."
+sudo dnf clean metadata || true
+sudo dnf makecache || warn "makecache fehlgeschlagen — Mirrors evtl. traege, Script laeuft trotzdem weiter."
+
+# ============================================================================
 # 1. DNF-Konfiguration
 # ============================================================================
 info "Konfiguriere DNF..."
