@@ -88,6 +88,17 @@ sudo dnf update -y @core || true
 log "RPM Fusion eingerichtet und verifiziert."
 
 # ============================================================================
+# 3b. Flatpak + Flathub
+# ============================================================================
+# WICHTIG: das muss VOR jedem "flatpak install" stehen (auch vor Abschnitt 4b/
+# Extension Manager) — sonst existiert der flathub-Remote noch nicht und der
+# Install schlaegt still fehl (nur eine warn-Zeile, kein harter Abbruch).
+info "Richte Flatpak/Flathub ein..."
+sudo dnf install -y flatpak
+sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+log "Flathub aktiv."
+
+# ============================================================================
 # 4. Minimal GNOME (Wayland) + GDM
 # ============================================================================
 # Bewusst OHNE gnome-shell-extensions (Bundle-Paket) — Extensions kommen
@@ -102,8 +113,7 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   gnome-session-wayland-session \
   nautilus \
   gnome-text-editor \
-  gnome-console \
-  gnome-system-monitor \
+  ptyxis \
   gnome-calculator \
   file-roller \
   gnome-disk-utility \
@@ -121,9 +131,10 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   wireplumber
 # Hinweis: kein separates Polkit-Agent-Paket noetig — gnome-shell bringt seit
 # GNOME 40 seinen eigenen Authentifizierungs-Agenten mit.
-# gnome-console ist Fedoras aktueller Standard-Terminal-Nachfolger von
-# gnome-terminal (Ptyxis-Basis). Falls du lieber sofort auf Kitty umsteigst,
-# einfach unten in Abschnitt 4b/13 mit einkommentieren.
+# ptyxis ist seit GNOME 47 / Fedora Workstation 41 der Standard-Terminal,
+# loest gnome-terminal ab (das gibt's zwar noch, ist aber nicht mehr Default).
+# System-Monitor: gnome-system-monitor bewusst weggelassen — Resources
+# (Nachfolger, GNOME-Incubator-Projekt) kommt stattdessen in Abschnitt 4b.
 
 # Fonts + Hardware-Support (Firmware etc.) — Gruppen, mit Fallback
 sudo dnf group install -y fonts || warn "Font-Gruppe nicht installierbar — pruefe manuell."
@@ -148,6 +159,12 @@ sudo flatpak install -y flathub com.mattjakeman.ExtensionManager || warn "Extens
 
 info "Installiere GNOME Tweaks + natives Extensions-App (Fallback/Kompatibilitaet)..."
 sudo dnf install -y gnome-tweaks gnome-extensions-app || warn "Tweaks/Extensions-App uebersprungen."
+
+info "Installiere Resources (Systemmonitor, Nachfolger von gnome-system-monitor)..."
+# Wie Extension Manager: auf Fedora offiziell nur Flatpak (Upstream empfiehlt
+# das explizit), inoffizielle COPR (atim/resources) existiert, aber nicht der
+# Standardweg. Auf Arch liegt "resources" regulaer im extra-Repo.
+sudo flatpak install -y flathub net.nokyan.Resources || warn "Resources-Flatpak fehlgeschlagen."
 
 info "Installiere Backgrounds (GNOME-Upstream + Fedora-44-Set)..."
 sudo dnf install -y gnome-backgrounds "f${FEDORA_VER}-backgrounds-gnome" || warn "Backgrounds-Pakete uebersprungen."
@@ -221,18 +238,22 @@ sudo dnf install -y \
 log "RADV 64/32-bit bereit. (RX 9070 XT laeuft in F44 out-of-the-box ueber Mesa.)"
 
 # ============================================================================
-# 7. Flatpak + Flathub
+# 7. (Flatpak/Flathub ist jetzt Abschnitt 3b — siehe oben, vor Abschnitt 4)
 # ============================================================================
-info "Richte Flatpak/Flathub ein..."
-sudo dnf install -y flatpak
-sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-log "Flathub aktiv."
 
 # ============================================================================
 # 8. Gaming-Software: Steam, Protontricks, ProtonPlus, Tools
 # ============================================================================
 info "Installiere Steam + Gaming-Tools..."
+# --exclude=wine-desktop: protontricks zieht winetricks -> winetricks zieht
+# das volle "wine"-Metapaket als Dependency. Das ist an sich harmlos (Proton
+# nutzt sowieso seine eigene Wine-Kopie im Prefix), ABER "wine-desktop" haengt
+# ein komplettes Menue voller Fake-Windows-Apps rein (Notepad, Wordpad,
+# Regedit, Winemine/"Minesweeper", Explorer, Uninstaller...) — reiner Muell
+# im App-Launcher. wine-core/wine-common bleiben drin, nur die .desktop-
+# Eintraege fliegen raus. Gleiches Problem gab's schon in der KDE-Version.
 sudo dnf install -y \
+  --exclude=wine-desktop \
   steam \
   steam-devices \
   protontricks || warn "Einzelne Gaming-Pakete fehlgeschlagen."
@@ -413,7 +434,7 @@ log "============================================="
 log " Fertig. Naechste Schritte:"
 log "   1. reboot  ->  GDM / GNOME (Wayland)"
 log "   2. vainfo  ->  H264/HEVC unter VAEntrypointVLD pruefen"
-log "   3. Extension Manager oeffnen -> Extensions installieren, Tweaks pruefen"
+log "   3. Extension Manager + Resources oeffnen -> Extensions installieren, Tweaks pruefen"
 log "   4. Steam starten, Proton-GE via ProtonPlus ziehen"
 log "   5. LACT: -70 mV / PL -25% setzen"
 log "   6. Neues Terminal = Fish. 'up' tippen -> expandiert zum Update-Befehl"
