@@ -88,7 +88,19 @@ sudo dnf update -y @core || true
 log "RPM Fusion eingerichtet und verifiziert."
 
 # ============================================================================
-# 3b. Flatpak + Flathub
+# 3b. Terra (rolling-release Community-Repo, Fyra Labs)
+# ============================================================================
+# Ersetzt gleich mehrere COPRs: Heroic und ProtonPlus kommen von hier statt
+# aus separaten COPR-Repos. Terra baut aktueller/haeufiger als die meisten
+# Einzel-COPRs, und die dortige Heroic-Version nutzt bereits umu-launcher als
+# Standard-Runner -> zieht KEIN System-Wine mehr (aeltere COPR-Builds taten
+# das noch, s. Abschnitt 8b weiter unten).
+info "Installiere Terra-Repo..."
+sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${FEDORA_VER}" terra-release || warn "Terra-Repo-Setup fehlgeschlagen."
+log "Terra aktiv."
+
+# ============================================================================
+# 3c. Flatpak + Flathub
 # ============================================================================
 # WICHTIG: das muss VOR jedem "flatpak install" stehen (auch vor Abschnitt 4b/
 # Extension Manager) — sonst existiert der flathub-Remote noch nicht und der
@@ -282,7 +294,7 @@ sudo dnf install -y \
 log "RADV 64/32-bit bereit. (RX 9070 XT laeuft in F44 out-of-the-box ueber Mesa.)"
 
 # ============================================================================
-# 7. (Flatpak/Flathub ist jetzt Abschnitt 3b — siehe oben, vor Abschnitt 4)
+# 7. (Flatpak/Flathub ist jetzt Abschnitt 3c — siehe oben, vor Abschnitt 4)
 # ============================================================================
 
 # ============================================================================
@@ -296,8 +308,10 @@ info "Installiere Steam + Gaming-Tools..."
 # also so oder so mit rein (wine-core wird von protontricks fuer den Proton-
 # Workflow ohnehin kaum gebraucht, Proton bringt seine eigene Wine-Kopie mit).
 # Der Cleanup (wine-desktop wieder raus) passiert erst GANZ am Ende (Abschnitt
-# 15) — Heroic (8b) zieht wine ueber seine eigene Windows-Spiele-Verwaltung
-# naemlich nochmal rein, ein Cleanup direkt hier waere also fuer die Katz.
+# 15) als Sicherheitsnetz — Heroic zieht seit dem Umstieg auf Terra (8b, nutzt
+# umu-launcher als Standard-Runner) selbst KEIN Wine mehr, aber falls Faugus
+# oder was anderes spaeter im Script doch nochmal wine-desktop reinzieht,
+# faengt der Cleanup am Ende das trotzdem ab.
 sudo dnf install -y \
   steam \
   steam-devices \
@@ -306,19 +320,20 @@ sudo dnf install -y \
 # gamescope optional — bei Bedarf einkommentieren:
 # sudo dnf install -y gamescope
 
-info "Installiere ProtonPlus (Flathub, offizieller Weg)..."
-sudo flatpak install -y flathub com.vysp3r.ProtonPlus || warn "ProtonPlus-Flatpak fehlgeschlagen."
+info "Installiere ProtonPlus (Terra, offiziell gelisteter Distributionskanal)..."
+sudo dnf install -y protonplus || warn "ProtonPlus (Terra) fehlgeschlagen."
 log "Steam, Protontricks, ProtonPlus installiert."
 
 # ============================================================================
 # 8b. Heroic + Faugus Launcher (nativ, kein Flatpak)
 # ============================================================================
-info "Installiere Heroic Games Launcher (COPR atim/heroic-games-launcher)..."
-if sudo dnf copr enable -y atim/heroic-games-launcher && \
-   sudo dnf install -y heroic-games-launcher-bin; then
-  log "Heroic (nativ) installiert — Updates laufen ueber dnf mit."
+info "Installiere Heroic Games Launcher (Terra)..."
+# Terra statt COPR: aktueller (2.18.x statt aeltere atim-Builds) und nutzt
+# umu-launcher als Standard-Runner -> zieht KEIN System-Wine mehr rein.
+if sudo dnf install -y heroic-games-launcher; then
+  log "Heroic (Terra) installiert — Updates laufen ueber dnf mit."
 else
-  warn "COPR fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
+  warn "Terra-Install fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
   HEROIC_URL=$(curl -s https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest \
     | grep -oP '"browser_download_url":\s*"\K[^"]*x86_64\.rpm' | head -n1)
   if [[ -n "${HEROIC_URL:-}" ]]; then
@@ -354,11 +369,11 @@ log "Chrome installiert."
 # ============================================================================
 # 10. LACT (GPU-Kontrolle: Undervolt/Powerlimit fuer die 9070 XT)
 # ============================================================================
-info "Installiere LACT..."
-if sudo dnf install -y lact 2>/dev/null; then
-  log "LACT aus Fedora-Repos."
+info "Installiere LACT (Terra, kein extra COPR mehr noetig)..."
+if sudo dnf install -y lact; then
+  log "LACT (Terra) installiert."
 else
-  warn "LACT nicht in den Repos — versuche COPR ilyaz/LACT..."
+  warn "Terra-Install fehlgeschlagen — Fallback: COPR ilyaz/LACT..."
   sudo dnf copr enable -y ilyaz/LACT && sudo dnf install -y lact || warn "LACT manuell nachinstallieren."
 fi
 sudo systemctl enable lactd 2>/dev/null || warn "lactd-Service nicht aktivierbar — nach Reboot pruefen."
@@ -483,7 +498,7 @@ info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
 # Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
 # Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
 # fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+# sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
 
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
