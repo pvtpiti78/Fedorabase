@@ -258,19 +258,14 @@ info "Installiere Steam + Gaming-Tools..."
 # stillschweigend, sobald es der einzige Weg ist, eine Requires-Kette
 # aufzuloesen. Wine kommt also so oder so mit rein (wine-core wird von
 # protontricks fuer den Proton-Workflow ohnehin kaum gebraucht, Proton
-# bringt seine eigene Wine-Kopie mit). Fix: normal installieren, danach
-# wine-desktop gezielt wieder raus.
+# bringt seine eigene Wine-Kopie mit). Der Cleanup (wine-desktop wieder raus)
+# passiert erst GANZ am Ende (Abschnitt 15) — Heroic (8b) zieht wine ueber
+# seine eigene Windows-Spiele-Verwaltung naemlich nochmal rein, ein Cleanup
+# direkt hier waere also fuer die Katz.
 sudo dnf install -y \
   steam \
   steam-devices \
   protontricks || warn "Einzelne Gaming-Pakete fehlgeschlagen."
-
-info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
-# Nimmt "wine" als Ganzes mit (kein Problem, s.o.) sowie ungenutzte
-# Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime fuer Wine-Sample-Apps)
-# und dosbox-staging + fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
-sudo dnf autoremove -y || true
 
 # gamescope optional — bei Bedarf einkommentieren:
 # sudo dnf install -y gamescope
@@ -444,6 +439,16 @@ log "Fish installiert, als Default-Shell gesetzt, Abbreviations geschrieben."
 # ============================================================================
 # 15. Aufraeumen + Abschluss
 # ============================================================================
+info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
+# Muss GANZ am Ende passieren: sowohl protontricks (Abschnitt 8) als auch
+# Heroic (Abschnitt 8b, eigene Windows-Spiele-Verwaltung) ziehen wine ueber
+# ihre jeweiligen Requires-Ketten rein. Ein Cleanup direkt nach Steam wuerde
+# von Heroic gleich wieder ueberschrieben. Nimmt "wine" als Ganzes mit (kein
+# Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
+# Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
+# fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
+sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
 
