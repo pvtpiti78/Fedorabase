@@ -112,6 +112,16 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   gnome-session \
   gnome-session-wayland-session \
   nautilus \
+  gvfs \
+  gvfs-mtp \
+  gvfs-gphoto2 \
+  gvfs-afc \
+  gvfs-smb \
+  gvfs-nfs \
+  gvfs-goa \
+  gvfs-fuse \
+  gvfs-archive \
+  sushi \
   gnome-text-editor \
   ptyxis \
   gnome-calculator \
@@ -131,6 +141,17 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   wireplumber
 # Hinweis: kein separates Polkit-Agent-Paket noetig — gnome-shell bringt seit
 # GNOME 40 seinen eigenen Authentifizierungs-Agenten mit.
+# gvfs-Backends explizit noetig (install_weak_deps=False greift hier auch):
+#   mtp     -> Android-Handys/MP3-Player
+#   gphoto2 -> PTP-Kameras
+#   afc     -> iPhone/iPad (zieht libimobiledevice automatisch mit)
+#   smb/nfs -> Windows-/NFS-Netzwerkfreigaben, direkt per Adresszeile
+#   goa     -> Online-Konten (Nextcloud/Google Drive etc.) in Nautilus-Sidebar
+#   fuse    -> noetig damit non-GIO-Apps (z.B. viele Proton/Wine-Programme,
+#              Terminal-Tools) ueberhaupt auf gvfs-Mounts zugreifen koennen
+#   archive -> zip/iso/tar direkt als Ordner mounten statt nur entpacken
+# sushi -> Space-Taste in Nautilus = Sofort-Vorschau (Bilder, PDF, Text/Code,
+#          Audio, Video, Fonts, Archiv-Inhalt) ohne die jeweilige App zu oeffnen.
 # ptyxis ist seit GNOME 47 / Fedora Workstation 41 der Standard-Terminal,
 # loest gnome-terminal ab (das gibt's zwar noch, ist aber nicht mehr Default).
 # System-Monitor: gnome-system-monitor bewusst weggelassen — Resources
@@ -168,10 +189,33 @@ sudo flatpak install -y flathub net.nokyan.Resources || warn "Resources-Flatpak 
 
 info "Installiere Backgrounds (GNOME-Upstream + Fedora-44-Set)..."
 sudo dnf install -y gnome-backgrounds "f${FEDORA_VER}-backgrounds-gnome" || warn "Backgrounds-Pakete uebersprungen."
-log "Extension Manager, Tweaks, Backgrounds eingerichtet."
+log "Extension Manager, Tweaks, Resources, Backgrounds eingerichtet."
 
 # ============================================================================
-# 4b. Archiv-Backends + CLI-Basics (fehlen in @core der Minimal-Install)
+# 4c. Drucken (CUPS + Netzwerk-Discovery fuer Brother etc.)
+# ============================================================================
+# Moderne Brother-Netzwerkdrucker (v.a. Laser) unterstuetzen fast immer
+# IPP Everywhere / AirPrint = treiberloses Drucken. avahi macht die
+# automatische Erkennung im Netzwerk (mDNS/Bonjour), dann taucht der Drucker
+# einfach in GNOME Settings -> Drucker auf, ganz ohne Brother-eigenen Treiber.
+# Falls dein Modell KEIN IPP Everywhere kann: proprietaeren Treiber von
+# support.brother.com laden (rpm-Paket, "Driver Install Tool").
+info "Installiere CUPS + Netzwerk-Druckerkennung..."
+sudo dnf install -y \
+  cups \
+  cups-filters \
+  cups-pk-helper \
+  avahi \
+  nss-mdns \
+  system-config-printer || warn "Einzelne Druck-Pakete fehlgeschlagen."
+
+sudo systemctl enable --now cups.socket || warn "cups.socket nicht aktivierbar."
+sudo systemctl enable --now avahi-daemon.service || warn "avahi-daemon nicht aktivierbar."
+log "CUPS + Avahi aktiv — Drucker sollte automatisch in GNOME Settings auftauchen."
+# Firewall-Freigabe fuer mDNS/IPP folgt in Abschnitt 12 (firewalld).
+
+# ============================================================================
+# 4d. Archiv-Backends + CLI-Basics (fehlen in @core der Minimal-Install)
 # ============================================================================
 # Kein base-devel-Aequivalent noetig: kein AUR, keine DKMS (AMD), COPRs
 # liefern Binaries. Aber Ark braucht die Backends, sonst kann es nur tar.
@@ -369,6 +413,10 @@ sudo systemctl enable --now firewalld || warn "firewalld nicht startbar — nach
 # Default-Zone: public (restriktiv, nur dhcpv6-client + ssh offen).
 # Fuer Desktop ohne SSH-Server kann ssh raus:
 sudo firewall-cmd --permanent --zone=public --remove-service=ssh 2>/dev/null || true
+# Netzwerkdrucker-Erkennung (Brother etc., Abschnitt 4c): mDNS fuer Avahi,
+# ipp-client fuer ausgehende/eingehende Druckkommunikation.
+sudo firewall-cmd --permanent --zone=public --add-service=mdns 2>/dev/null || true
+sudo firewall-cmd --permanent --zone=public --add-service=ipp-client 2>/dev/null || true
 # Steam Local Network Game Transfer — bei Bedarf einkommentieren:
 # sudo firewall-cmd --permanent --add-port=27040/tcp
 # sudo firewall-cmd --permanent --add-port=27036/udp
@@ -441,7 +489,8 @@ log " Fertig. Naechste Schritte:"
 log "   1. reboot  ->  GDM / GNOME (Wayland)"
 log "   2. vainfo  ->  H264/HEVC unter VAEntrypointVLD pruefen"
 log "   3. Extension Manager + Resources oeffnen -> Extensions installieren, Tweaks pruefen"
-log "   4. Steam starten, Proton-GE via ProtonPlus ziehen"
-log "   5. LACT: -70 mV / PL -25% setzen"
-log "   6. Neues Terminal = Fish. 'up' tippen -> expandiert zum Update-Befehl"
+log "   4. GNOME Settings -> Drucker: Brother sollte automatisch auftauchen"
+log "   5. Steam starten, Proton-GE via ProtonPlus ziehen"
+log "   6. LACT: -70 mV / PL -25% setzen"
+log "   7. Neues Terminal = Fish. 'up' tippen -> expandiert zum Update-Befehl"
 log "============================================="
