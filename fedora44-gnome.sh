@@ -245,18 +245,24 @@ log "RADV 64/32-bit bereit. (RX 9070 XT laeuft in F44 out-of-the-box ueber Mesa.
 # 8. Gaming-Software: Steam, Protontricks, ProtonPlus, Tools
 # ============================================================================
 info "Installiere Steam + Gaming-Tools..."
-# --exclude=wine-desktop: protontricks zieht winetricks -> winetricks zieht
-# das volle "wine"-Metapaket als Dependency. Das ist an sich harmlos (Proton
-# nutzt sowieso seine eigene Wine-Kopie im Prefix), ABER "wine-desktop" haengt
-# ein komplettes Menue voller Fake-Windows-Apps rein (Notepad, Wordpad,
-# Regedit, Winemine/"Minesweeper", Explorer, Uninstaller...) — reiner Muell
-# im App-Launcher. wine-core/wine-common bleiben drin, nur die .desktop-
-# Eintraege fliegen raus. Gleiches Problem gab's schon in der KDE-Version.
+# HINWEIS: --exclude=wine-desktop bringt hier NICHTS — winetricks (Hard-Dep
+# von protontricks) requires wine, und Fedoras "wine"-Metapaket requires
+# wine-desktop HART, ohne Alternative. dnf ignoriert --exclude stillschweigend,
+# sobald es der einzige Weg ist, eine Requires-Kette aufzuloesen. Wine kommt
+# also so oder so mit rein (wine-core wird von protontricks fuer den Proton-
+# Workflow ohnehin kaum gebraucht, Proton bringt seine eigene Wine-Kopie mit).
+# Fix: normal installieren, danach wine-desktop gezielt wieder raus.
 sudo dnf install -y \
-  --exclude=wine-desktop \
   steam \
   steam-devices \
   protontricks || warn "Einzelne Gaming-Pakete fehlgeschlagen."
+
+info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
+# Nimmt "wine" als Ganzes mit (kein Problem, s.o.) sowie ungenutzte
+# Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime fuer Wine-Sample-Apps)
+# und dosbox-staging + fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
+sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+sudo dnf autoremove -y || true
 
 # gamescope optional — bei Bedarf einkommentieren:
 # sudo dnf install -y gamescope
