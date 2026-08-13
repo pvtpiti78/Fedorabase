@@ -351,13 +351,21 @@ compression-algorithm = zstd
 EOF
 
 # Gaming-Env (dein settled Setup)
-sudo tee /etc/profile.d/gaming.sh >/dev/null <<'EOF'
-export MESA_SHADER_CACHE_MAX_SIZE=12G
-export PROTON_ENABLE_HDR=1
-export PROTON_USE_OPTISCALER=1
-export PROTON_FSR4_UPGRADE=1
-export PROTON_XESS_UPGRADE=1
-export PROTON_ENABLE_WAYLAND=1
+# WICHTIG: /etc/profile.d/*.sh wird NUR von Login-Shells eingelesen (bash
+# --login, klassisches TTY-Login) — nicht von grafisch gestarteten Programmen
+# (Steam-Icon-Klick etc. laufen ueber Plasma Login Manager/systemd --user,
+# keine Login-Shell). environment.d ist der systemd-korrekte Weg: wird vom
+# User-Manager beim Session-Start eingelesen, gilt fuer ALLES in der Session,
+# auch GUI-Starts. Syntax ist strikt KEY=VALUE — kein "export", keine
+# Anfuehrungszeichen.
+sudo mkdir -p /etc/environment.d
+sudo tee /etc/environment.d/90-gaming.conf >/dev/null <<'EOF'
+MESA_SHADER_CACHE_MAX_SIZE=12G
+PROTON_ENABLE_HDR=1
+PROTON_USE_OPTISCALER=1
+PROTON_FSR4_UPGRADE=1
+PROTON_XESS_UPGRADE=1
+PROTON_ENABLE_WAYLAND=1
 EOF
 
 sudo systemctl enable fstrim.timer || warn "fstrim.timer nicht aktivierbar."

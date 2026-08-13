@@ -134,6 +134,9 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   gvfs-fuse \
   gvfs-archive \
   sushi \
+  glycin-loaders \
+  glycin-thumbnailer \
+  libopenraw \
   gnome-text-editor \
   ptyxis \
   gnome-calculator \
@@ -164,6 +167,14 @@ sudo dnf install -y --setopt=install_weak_deps=False \
 #   archive -> zip/iso/tar direkt als Ordner mounten statt nur entpacken
 # sushi -> Space-Taste in Nautilus = Sofort-Vorschau (Bilder, PDF, Text/Code,
 #          Audio, Video, Fonts, Archiv-Inhalt) ohne die jeweilige App zu oeffnen.
+# glycin-loaders/-thumbnailer -> GNOME 49 hat Bild-Thumbnails komplett von
+#          gdk-pixbuf auf glycin (sandboxed, Rust) umgestellt. glycin-loaders
+#          liefert die Decoder (JPEG/PNG/WebP/AVIF/HEIF/JXL/SVG), aber der
+#          Haken in Nautilus' Thumbnailer-Spec ist glycin-thumbnailer — ein
+#          SEPARATES Paket, das bei install_weak_deps=False NICHT automatisch
+#          mitkommt. Ohne das bleiben Bildvorschauen komplett leer, auch bei
+#          stinknormalem JPEG/PNG. libopenraw noch dazu fuer RAW-Kamerabilder
+#          (glycin selbst hat dafuer noch keinen Fedora-gepackten Loader).
 # ptyxis ist seit GNOME 47 / Fedora Workstation 41 der Standard-Terminal,
 # loest gnome-terminal ab (das gibt's zwar noch, ist aber nicht mehr Default).
 # System-Monitor: gnome-system-monitor bewusst weggelassen — Resources
@@ -402,13 +413,20 @@ compression-algorithm = zstd
 EOF
 
 # Gaming-Env (dein settled Setup)
-sudo tee /etc/profile.d/gaming.sh >/dev/null <<'EOF'
-export MESA_SHADER_CACHE_MAX_SIZE=12G
-export PROTON_ENABLE_HDR=1
-export PROTON_USE_OPTISCALER=1
-export PROTON_FSR4_UPGRADE=1
-export PROTON_XESS_UPGRADE=1
-export PROTON_ENABLE_WAYLAND=1
+# WICHTIG: /etc/profile.d/*.sh wird NUR von Login-Shells eingelesen (bash
+# --login, klassisches TTY-Login) — nicht von grafisch gestarteten Programmen
+# (Steam-Icon-Klick etc. laufen ueber GDM/systemd --user, keine Login-Shell).
+# environment.d ist der systemd-korrekte Weg: wird vom User-Manager beim
+# Session-Start eingelesen, gilt fuer ALLES in der Session, auch GUI-Starts.
+# Syntax ist strikt KEY=VALUE — kein "export", keine Anfuehrungszeichen.
+sudo mkdir -p /etc/environment.d
+sudo tee /etc/environment.d/90-gaming.conf >/dev/null <<'EOF'
+MESA_SHADER_CACHE_MAX_SIZE=12G
+PROTON_ENABLE_HDR=1
+PROTON_USE_OPTISCALER=1
+PROTON_FSR4_UPGRADE=1
+PROTON_XESS_UPGRADE=1
+PROTON_ENABLE_WAYLAND=1
 EOF
 
 sudo systemctl enable fstrim.timer || warn "fstrim.timer nicht aktivierbar."
@@ -498,7 +516,7 @@ info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
 # Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
 # Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
 # fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-# sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
 
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
