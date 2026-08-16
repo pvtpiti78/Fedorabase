@@ -255,10 +255,10 @@ log "RADV 64/32-bit bereit. (RX 9070 XT laeuft in F44 out-of-the-box ueber Mesa.
 # ============================================================================
 # 7. Flatpak + Flathub
 # ============================================================================
-info "Richte Flatpak/Flathub ein..."
-sudo dnf install -y flatpak
-sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-log "Flathub aktiv."
+# info "Richte Flatpak/Flathub ein..."
+# sudo dnf install -y flatpak
+# sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+# log "Flathub aktiv."
 
 # ============================================================================
 # 8. Gaming-Software: Steam, Protontricks, ProtonPlus, Tools
@@ -422,7 +422,7 @@ if status is-interactive
     set -g fish_greeting  # Begruessung aus
 
     # --- Update: DNF + Flatpak in einem Rutsch ---
-    abbr -a up   'sudo dnf upgrade --refresh; and flatpak update -y'
+    abbr -a up   'sudo dnf upgrade --refresh'
 
     # --- DNF-Basics ---
     abbr -a in   'sudo dnf install'
@@ -434,7 +434,7 @@ if status is-interactive
     abbr -a wp   'dnf provides'          # welches Paket liefert Datei X
 
     # --- Aufraeumen: DNF + Flatpak ---
-    abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages; and flatpak uninstall --unused -y'
+    abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages; and sudo dnf clean all'
 
     # --- Flatpak ---
     abbr -a fin  'flatpak install flathub'
@@ -469,7 +469,7 @@ info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
 # Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
 # Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
 # fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+# sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
 
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
