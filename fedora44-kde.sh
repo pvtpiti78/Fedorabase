@@ -185,16 +185,18 @@ log "mtp:/, afc:/ und smb:/ in Dolphin einsatzbereit."
 # ============================================================================
 # Moderne Brother-Netzwerkdrucker (v.a. Laser) unterstuetzen fast immer
 # IPP Everywhere / AirPrint = treiberloses Drucken. avahi macht die
-# automatische Erkennung im Netzwerk (mDNS/Bonjour). print-manager ist das
-# KDE-Pendant zu GNOMEs Drucker-Panel (Systray-Applet + Systemeinstellungen-
-# Modul). Falls dein Modell KEIN IPP Everywhere kann: proprietaeren Treiber
-# von support.brother.com laden (rpm-Paket, "Driver Install Tool").
+# automatische Erkennung im Netzwerk (mDNS/Bonjour). kde-print-manager ist
+# das KDE-Pendant zu GNOMEs Drucker-Panel (Systray-Applet + Systemeinstel-
+# lungen-Modul) — auf Fedora heisst das Paket "kde-print-manager", NICHT
+# "print-manager" (das ist der Arch-Paketname). Falls dein Modell KEIN IPP
+# Everywhere kann: proprietaeren Treiber von support.brother.com laden
+# (rpm-Paket, "Driver Install Tool").
 info "Installiere CUPS + Netzwerk-Druckerkennung..."
 sudo dnf install -y \
   cups \
   cups-filters \
   cups-pk-helper \
-  print-manager \
+  kde-print-manager \
   avahi \
   nss-mdns \
   system-config-printer || warn "Einzelne Druck-Pakete fehlgeschlagen."
@@ -255,10 +257,10 @@ log "RADV 64/32-bit bereit. (RX 9070 XT laeuft in F44 out-of-the-box ueber Mesa.
 # ============================================================================
 # 7. Flatpak + Flathub
 # ============================================================================
-# info "Richte Flatpak/Flathub ein..."
-# sudo dnf install -y flatpak
-# sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-# log "Flathub aktiv."
+info "Richte Flatpak/Flathub ein..."
+sudo dnf install -y flatpak
+sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+log "Flathub aktiv."
 
 # ============================================================================
 # 8. Gaming-Software: Steam, Protontricks, ProtonPlus, Tools
@@ -422,7 +424,7 @@ if status is-interactive
     set -g fish_greeting  # Begruessung aus
 
     # --- Update: DNF + Flatpak in einem Rutsch ---
-    abbr -a up   'sudo dnf upgrade --refresh'
+    abbr -a up   'sudo dnf upgrade --refresh; and flatpak update -y'
 
     # --- DNF-Basics ---
     abbr -a in   'sudo dnf install'
@@ -434,7 +436,7 @@ if status is-interactive
     abbr -a wp   'dnf provides'          # welches Paket liefert Datei X
 
     # --- Aufraeumen: DNF + Flatpak ---
-    abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages; and sudo dnf clean all'
+    abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages; and flatpak uninstall --unused -y'
 
     # --- Flatpak ---
     abbr -a fin  'flatpak install flathub'
@@ -469,7 +471,7 @@ info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
 # Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
 # Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
 # fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-# sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
 
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
