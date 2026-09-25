@@ -58,7 +58,7 @@ sudo dnf install -y dnf5-plugins || warn "dnf5-plugins konnte nicht installiert 
 
 # Locales — Minimal-Netinstall generiert kein en_US/de_DE, sonst pv-locale-gen-
 # Fehler in der Steam Runtime beim ersten Proton-Start ("character map file
-# 'UTF-8' not found").
+# 'UTF-8' nicht found").
 info "Installiere Locales (en_US, de_DE)..."
 sudo dnf install -y glibc-langpack-en glibc-langpack-de || warn "Locale-Pakete uebersprungen."
 
@@ -77,12 +77,8 @@ sudo dnf install -y \
   "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VER}.noarch.rpm" \
   "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VER}.noarch.rpm"
 
-# --- BUGFIX (bekannt seit F44, ob es unter F45 noch auftritt ist offen):
-#     Release-Paket aktiviert faelschlich die Rawhide-Repos und laesst die
-#     richtigen F45-Repos deaktiviert -> glibc-Konflikte. Schadet nicht,
-#     falls der Bug in F45 bereits behoben ist (setopt auf enabled=1/0
-#     ist dann einfach ein No-Op).
-info "Korrigiere RPM-Fusion-Repo-Status (F44 Rawhide-Bug)..."
+# --- BUGFIX: Verhindert versehentlich aktive Rawhide-Repos
+info "Korrigiere RPM-Fusion-Repo-Status..."
 for repo in rpmfusion-free rpmfusion-free-updates rpmfusion-nonfree rpmfusion-nonfree-updates; do
   sudo dnf config-manager setopt "${repo}.enabled=1" || warn "Konnte ${repo} nicht aktivieren."
 done
@@ -90,7 +86,7 @@ for repo in rpmfusion-free-rawhide rpmfusion-nonfree-rawhide; do
   sudo dnf config-manager setopt "${repo}.enabled=0" 2>/dev/null || true
 done
 
-# AppStream-Metadaten + Cisco OpenH264 (Firefox-H264, schadet auch sonst nicht)
+# AppStream-Metadaten + Cisco OpenH264
 sudo dnf install -y rpmfusion-free-release-tainted rpmfusion-nonfree-release-tainted || warn "Tainted-Repos optional, uebersprungen."
 sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1 || warn "openh264-Repo nicht aktivierbar."
 sudo dnf update -y @core || true
@@ -99,14 +95,6 @@ log "RPM Fusion eingerichtet und verifiziert."
 # ============================================================================
 # 3a. RPM-Fusion-Updates-Metadaten-Fallback (Beta-only)
 # ============================================================================
-# Waehrend der Beta-Phase existieren "updates-released-${FEDORA_VER}" bei
-# RPM Fusion noch nicht (die legen sie erst mit dem finalen Release an) ->
-# dnf haengt sich sonst bei jedem Lauf an 404-Metalinks auf (repomd.xml
-# nicht gefunden). Wir pruefen das gezielt per curl und weichen im
-# Beta-Fall auf die Vorversion (${FEDORA_VER}-1) aus, indem wir metalink
-# leeren (sonst hat es Vorrang) und stattdessen baseurl setzen. Sobald
-# RPM Fusion die 45er-Metadaten veroeffentlicht, einfach die Overrides
-# wieder entfernen (siehe Abschluss-Hinweis unten).
 info "Pruefe RPM-Fusion-Updates-Metadaten fuer Fedora ${FEDORA_VER}..."
 PREV_VER=$((FEDORA_VER - 1))
 for variant in free nonfree; do
@@ -125,62 +113,41 @@ log "RPM-Fusion-Updates-Fallback geprueft."
 # ============================================================================
 # 3b. Terra (rolling-release Community-Repo, Fyra Labs)
 # ============================================================================
-# Ersetzt Heroic- und ProtonPlus-COPR: Terra baut aktueller/haeufiger, und
-# die dortige Heroic-Version nutzt bereits umu-launcher als Standard-Runner
-# -> zieht KEIN System-Wine mehr (aeltere COPR-Builds taten das noch).
-# LACT kommt ebenfalls von hier (kein extra COPR mehr noetig).
-# Faugus bleibt auf der eigenen COPR — NICHT auf Terra verfuegbar (geprueft).
-info "Pruefe Terra-Verfuegbarkeit fuer Fedora ${FEDORA_VER}..."
-# Terra legt den Branch pro Fedora-Version erst an, wenn Fedora "branched"
-# ist — waehrend der Beta-Phase kann das noch fehlen, oder frisch angelegte
-# Branches sind noch nicht durch alle Mirrors synced (Checksum-Mismatch-
-# Fehler trotz vorhandenem Branch). In beiden Faellen: TEMPORAERER Fallback
-# auf F${PREV_VER}. ACHTUNG: Terra-Pakete sind staerker an glibc/ABI der
-# jeweiligen Fedora-Version gebunden als z.B. RPM-Fusion-Codecs — bei GUI-
-# Apps (ProtonPlus/Heroic/LACT) ueberschaubares Risiko, aber kein genereller
-# Freifahrtschein fuer beliebige Terra-Pakete. Sobald der F${FEDORA_VER}-
-# Branch stabil laeuft: "sudo dnf config-manager setopt terra.metalink=https://tetsudou.fyralabs.com/metalink?repo=terra\$releasever\&arch=\$basearch"
-# zum Zuruecksetzen auf den Standard.
+info "Richte Terra-Repository ein..."
 TERRA_AVAILABLE=0
-TERRA_VER_USED=""
 
-try_terra_install() {
-  local ver="$1"
-  # Etwaige Repo-Leiche vorher entfernen: --repofrompath definiert die
-  # temporaere ID "terra" fuer diesen Aufruf. Existiert parallel schon eine
-  # PERMANENTE terra.repo mit derselben ID (aus vorherigem Lauf oder
-  # manueller Installation), lehnt dnf5 die doppelte ID ab und der ganze
-  # Befehl schlaegt fehl — sieht dann wie "Terra nicht erreichbar" aus,
-  # obwohl die bestehende Konfiguration in Wahrheit einwandfrei laeuft.
-  sudo rm -f /etc/yum.repos.d/terra*.repo
-  sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${ver}" terra-release
-}
+# 1. terra-release direkt per RPM installieren (umgeht DNF5-repofrompath-Bugs)
+TERRA_RPM_URL="https://repos.fyralabs.com/terra${FEDORA_VER}/terra-release.noarch.rpm"
+if ! curl -sf -I "$TERRA_RPM_URL" >/dev/null 2>&1; then
+  warn "Terra F${FEDORA_VER} RPM nicht erreichbar, versuche F${PREV_VER}-Release..."
+  TERRA_RPM_URL="https://repos.fyralabs.com/terra${PREV_VER}/terra-release.noarch.rpm"
+fi
 
-if rpm -q terra-release &>/dev/null; then
-  # terra-release ist schon da (vorheriger Lauf / manuell installiert) —
-  # NICHT per --repofrompath neu definieren (ID-Kollision, siehe oben),
-  # sondern die vorhandene, bereits funktionierende Konfiguration nutzen.
-  info "terra-release bereits vorhanden — uebernehme bestehende Konfiguration statt Neu-Setup."
-  TERRA_AVAILABLE=1
-  TERRA_VER_USED="(bestehende Konfiguration)"
-elif curl -sf -o /dev/null "https://tetsudou.fyralabs.com/metalink?repo=terra${FEDORA_VER}&arch=x86_64" \
-   && try_terra_install "$FEDORA_VER"; then
-  log "Terra F${FEDORA_VER} aktiv."
-  TERRA_AVAILABLE=1
-  TERRA_VER_USED="$FEDORA_VER"
-else
-  warn "Terra F${FEDORA_VER} nicht nutzbar (Branch fehlt oder Mirror-Sync-Problem) — versuche Fallback auf F${PREV_VER}..."
-  if try_terra_install "$PREV_VER"; then
-    # terra-release legt terra.repo mit dynamischem $releasever an -> wuerde
-    # sofort wieder auf F${FEDORA_VER} zeigen. Explizit auf PREV_VER pinnen.
-    sudo dnf config-manager setopt "terra.metalink=" || true
-    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${PREV_VER}" || true
-    TERRA_AVAILABLE=1
-    TERRA_VER_USED="$PREV_VER"
-    warn "Terra laeuft TEMPORAER auf F${PREV_VER}-Paketen (ABI-Mismatch-Risiko bei einzelnen Paketen). Bei Problemen mit einem Terra-Paket: 'sudo dnf remove <paket>' und Flatpak/GitHub-Release als Alternative."
+if sudo dnf install -y --nogpgcheck "$TERRA_RPM_URL"; then
+  # 2. Checksum-Fix: Metalink deaktivieren und direkt auf Baseurl pinnen.
+  # Verhindert Desync-Fehler von tetsudou-Mirrors während der Beta.
+  info "Konfiguriere Terra-Repo-Pfade (Bypass fuer Metalink-Sync-Fehler)..."
+  sudo dnf config-manager setopt terra.metalink="" 2>/dev/null || true
+  
+  if curl -sf -o /dev/null "https://repos.fyralabs.com/terra${FEDORA_VER}/repodata/repomd.xml"; then
+    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${FEDORA_VER}" || true
+    log "Terra F${FEDORA_VER} via Direktanbindung aktiv."
   else
-    warn "Terra komplett nicht erreichbar (weder F${FEDORA_VER} noch F${PREV_VER}) — Terra-Pakete werden uebersprungen, Heroic/LACT nutzen ihre Fallbacks weiter unten. ProtonPlus ggf. spaeter manuell via Flatpak (com.vysp3r.ProtonPlus) nachinstallieren."
+    warn "Terra F${FEDORA_VER} noch leer/unvollständig — Fallback auf F${PREV_VER} Baseurl."
+    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${PREV_VER}" || true
   fi
+
+  # Metadaten-Cache für Terra frisch erzwingen
+  sudo dnf clean metadata --repo=terra || true
+  if sudo dnf makecache --repo=terra; then
+    TERRA_AVAILABLE=1
+    log "Terra erfolgreich synchronisiert."
+  else
+    warn "Terra makecache fehlgeschlagen — wird vorerst deaktiviert."
+    sudo dnf config-manager setopt terra.enabled=0 || true
+  fi
+else
+  warn "terra-release konnte nicht installiert werden. Fallbacks greifen automatisch."
 fi
 
 # ============================================================================
@@ -220,7 +187,7 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   pipewire-pulseaudio \
   wireplumber
 
-# Fonts + Hardware-Support (Firmware etc.) — Gruppen, mit Fallback
+# Fonts + Hardware-Support
 sudo dnf group install -y fonts || warn "Font-Gruppe nicht installierbar — pruefe manuell."
 sudo dnf group install -y hardware-support || warn "hardware-support-Gruppe uebersprungen."
 
@@ -231,10 +198,8 @@ sudo systemctl set-default graphical.target
 log "Plasma minimal + Plasma Login Manager installiert, graphical.target gesetzt."
 
 # ============================================================================
-# 4b. Archiv-Backends + CLI-Basics (fehlen in @core der Minimal-Install)
+# 4b. Archiv-Backends + CLI-Basics
 # ============================================================================
-# Kein base-devel-Aequivalent noetig: kein AUR, keine DKMS (AMD), COPRs
-# liefern Binaries. Aber Ark braucht die Backends, sonst kann es nur tar.
 info "Installiere Archiv-Tools + CLI-Basics..."
 sudo dnf install -y \
   unzip \
@@ -245,17 +210,12 @@ sudo dnf install -y \
   bzip2 \
   wget \
   btop || warn "Einzelne Utility-Pakete fehlgeschlagen."
-# unrar kommt aus RPM Fusion nonfree (proprietaer):
 sudo dnf install -y unrar || warn "unrar uebersprungen — RPM-Fusion-Status pruefen."
 log "Archiv-Backends bereit."
 
 # ============================================================================
 # 4c. MTP/Netzwerk-Freigaben fuer Dolphin (kio-extras Backends)
 # ============================================================================
-# kio-extras (schon in Abschnitt 4 dabei) bringt die MTP/AFC/SMB-KIO-Slaves
-# im Code schon mit, aber libmtp/libimobiledevice sind nur weiche
-# Abhaengigkeiten (dlopen zur Laufzeit) — bei install_weak_deps=False werden
-# die NICHT automatisch mitgezogen, dann bleibt "mtp:/" in Dolphin leer.
 info "Installiere MTP/AFC/SMB-Laufzeitbibliotheken fuer kio-extras..."
 sudo dnf install -y \
   libmtp \
@@ -266,14 +226,6 @@ log "mtp:/, afc:/ und smb:/ in Dolphin einsatzbereit."
 # ============================================================================
 # 4d. Drucken (CUPS + Netzwerk-Discovery fuer Brother etc.)
 # ============================================================================
-# Moderne Brother-Netzwerkdrucker (v.a. Laser) unterstuetzen fast immer
-# IPP Everywhere / AirPrint = treiberloses Drucken. avahi macht die
-# automatische Erkennung im Netzwerk (mDNS/Bonjour). kde-print-manager ist
-# das KDE-Pendant zu GNOMEs Drucker-Panel (Systray-Applet + Systemeinstel-
-# lungen-Modul) — auf Fedora heisst das Paket "kde-print-manager", NICHT
-# "print-manager" (das ist der Arch-Paketname). Falls dein Modell KEIN IPP
-# Everywhere kann: proprietaeren Treiber von support.brother.com laden
-# (rpm-Paket, "Driver Install Tool").
 info "Installiere CUPS + Netzwerk-Druckerkennung..."
 sudo dnf install -y \
   cups \
@@ -286,8 +238,7 @@ sudo dnf install -y \
 
 sudo systemctl enable --now cups.socket || warn "cups.socket nicht aktivierbar."
 sudo systemctl enable --now avahi-daemon.service || warn "avahi-daemon nicht aktivierbar."
-log "CUPS + Avahi aktiv — Drucker sollte automatisch in Systemeinstellungen -> Drucker auftauchen."
-# Firewall-Freigabe fuer mDNS/IPP folgt in Abschnitt 12 (firewalld).
+log "CUPS + Avahi aktiv."
 
 # ============================================================================
 # 5. Multimedia: Full ffmpeg + GStreamer + VA-API (AMD Freeworld)
@@ -296,7 +247,7 @@ info "Wechsle auf volles ffmpeg (RPM Fusion)..."
 sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing || \
   sudo dnf install -y ffmpeg --allowerasing
 
-info "Installiere GStreamer-Codecs (explizit, DNF5-sicher)..."
+info "Installiere GStreamer-Codecs..."
 sudo dnf install -y --setopt=install_weak_deps=False \
   --exclude=PackageKit-gstreamer-plugin \
   gstreamer1-plugins-base \
@@ -307,7 +258,7 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   gstreamer1-plugins-ugly-free \
   gstreamer1-plugin-libav \
   gstreamer1-plugin-openh264 \
-  || warn "Einzelne GStreamer-Pakete fehlgeschlagen — Namen pruefen."
+  || warn "Einzelne GStreamer-Pakete fehlgeschlagen."
 
 info "VA-API/VDPAU Freeworld-Swap (H.264/H.265 Hardware-Decode fuer RDNA4)..."
 if rpm -q mesa-va-drivers >/dev/null 2>&1; then
@@ -320,9 +271,8 @@ if rpm -q mesa-vdpau-drivers >/dev/null 2>&1; then
 else
   sudo dnf install -y mesa-vdpau-drivers-freeworld || warn "VDPAU freeworld uebersprungen."
 fi
-# 32-bit fuer Steam/Proton
 sudo dnf install -y mesa-va-drivers-freeworld.i686 || warn "32-bit VA-API uebersprungen."
-sudo dnf install -y libva-utils   # vainfo zum Verifizieren
+sudo dnf install -y libva-utils
 log "Codecs + Hardware-Decode eingerichtet."
 
 # ============================================================================
@@ -335,57 +285,33 @@ sudo dnf install -y \
   vulkan-loader \
   vulkan-loader.i686 \
   vulkan-tools
-log "RADV 64/32-bit bereit. (RX 9070 XT sollte weiterhin out-of-the-box ueber Mesa laufen — auf Beta-Kernel/Mesa kurz mit vainfo/vulkaninfo gegenchecken.)"
-
-# ============================================================================
-# 7. Flatpak + Flathub
-# ============================================================================
-# info "Richte Flatpak/Flathub ein..."
-# sudo dnf install -y flatpak
-# sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-# log "Flathub aktiv."
+log "RADV 64/32-bit bereit."
 
 # ============================================================================
 # 8. Gaming-Software: Steam, Protontricks, ProtonPlus, Tools
 # ============================================================================
 info "Installiere Steam + Gaming-Tools..."
-# HINWEIS: --exclude=wine-desktop wuerde hier NICHTS bringen — winetricks
-# (Hard-Dep von protontricks) requires wine, und Fedoras "wine"-Metapaket
-# requires wine-desktop HART, ohne Alternative. dnf ignoriert --exclude
-# stillschweigend, sobald es der einzige Weg ist, eine Requires-Kette
-# aufzuloesen. Wine kommt also so oder so mit rein (wine-core wird von
-# protontricks fuer den Proton-Workflow ohnehin kaum gebraucht, Proton
-# bringt seine eigene Wine-Kopie mit). Der Cleanup (wine-desktop wieder raus)
-# passiert erst GANZ am Ende (Abschnitt 15) als Sicherheitsnetz — Heroic
-# zieht seit dem Umstieg auf Terra (8b, nutzt umu-launcher als Standard-
-# Runner) selbst KEIN Wine mehr, aber falls Faugus oder was anderes spaeter
-# im Script doch nochmal wine-desktop reinzieht, faengt der Cleanup das ab.
 sudo dnf install -y \
   steam \
   steam-devices \
   protontricks || warn "Einzelne Gaming-Pakete fehlgeschlagen."
 
-# gamescope optional — bei Bedarf einkommentieren:
-# sudo dnf install -y gamescope
-
-info "Installiere ProtonPlus (Terra, offiziell gelisteter Distributionskanal)..."
+info "Installiere ProtonPlus..."
 if [[ "$TERRA_AVAILABLE" == "1" ]]; then
   sudo dnf install -y protonplus || warn "ProtonPlus (Terra) fehlgeschlagen."
 else
-  warn "ProtonPlus uebersprungen (Terra fuer F${FEDORA_VER} noch nicht verfuegbar) — spaeter via Flatpak (com.vysp3r.ProtonPlus, offizieller Hauptkanal laut Upstream) nachinstallieren."
+  warn "ProtonPlus uebersprungen (Terra nicht aktiv) — spaeter via Flatpak nachinstallieren."
 fi
-log "Steam, Protontricks, ProtonPlus installiert."
+log "Steam, Protontricks, ProtonPlus verarbeitet."
 
 # ============================================================================
 # 8b. Heroic + Faugus Launcher (nativ, kein Flatpak)
 # ============================================================================
-info "Installiere Heroic Games Launcher (Terra)..."
-# Terra statt COPR: aktueller (2.18.x statt aeltere atim-Builds) und nutzt
-# umu-launcher als Standard-Runner -> zieht KEIN System-Wine mehr rein.
+info "Installiere Heroic Games Launcher..."
 if sudo dnf install -y heroic-games-launcher; then
-  log "Heroic (Terra) installiert — Updates laufen ueber dnf mit."
+  log "Heroic installiert."
 else
-  warn "Terra-Install fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
+  warn "Heroic fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
   HEROIC_URL=$(curl -s https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest \
     | grep -oP '"browser_download_url":\s*"\K[^"]*x86_64\.rpm' | head -n1)
   if [[ -n "${HEROIC_URL:-}" ]]; then
@@ -395,18 +321,12 @@ else
   fi
 fi
 
-info "Installiere GLES-Support (Faugus/GTK-Abhaengigkeit)..."
-# Ohne das crasht Faugus beim GUI-Start mit:
-# "Couldn't open libGLESv2.so.2" -> SIGABRT. Paketname ist libglvnd-gles,
-# NICHT mesa-libGLES (das Paket gibt es unter F44 nicht mehr/so nicht).
+info "Installiere GLES-Support..."
 sudo dnf install -y libglvnd-gles.x86_64 libglvnd-gles.i686 || warn "libglvnd-gles uebersprungen."
 
-info "Installiere Faugus Launcher (offizielles COPR faugus/faugus-launcher)..."
+info "Installiere Faugus Launcher (COPR faugus/faugus-launcher)..."
 sudo dnf copr enable -y faugus/faugus-launcher && \
   sudo dnf install -y faugus-launcher || warn "Faugus Launcher fehlgeschlagen."
-# Hinweis: zieht umu-launcher automatisch mit.
-# Runner-Pfad: ~/.local/share/Steam/compatibilitytools.d/ (Proton-GE via ProtonPlus
-# wird also von Faugus direkt gefunden).
 log "Launcher-Sektion abgeschlossen."
 
 # ============================================================================
@@ -419,9 +339,9 @@ sudo dnf install -y google-chrome-stable
 log "Chrome installiert."
 
 # ============================================================================
-# 10. LACT (GPU-Kontrolle: Undervolt/Powerlimit fuer die 9070 XT)
+# 10. LACT (GPU-Kontrolle: Undervolt/Powerlimit)
 # ============================================================================
-info "Installiere LACT (Terra, kein extra COPR mehr noetig)..."
+info "Installiere LACT..."
 if sudo dnf install -y lact; then
   log "LACT (Terra) installiert."
 else
@@ -429,38 +349,23 @@ else
   sudo dnf copr enable -y ilyaz/LACT && sudo dnf install -y lact || warn "LACT manuell nachinstallieren."
 fi
 sudo systemctl enable lactd 2>/dev/null || warn "lactd-Service nicht aktivierbar — nach Reboot pruefen."
-# Dein Setting zur Erinnerung: -70 mV / -25% Powerlimit
 
 # ============================================================================
 # 11. System-Tuning
 # ============================================================================
 info "Schreibe Tuning-Configs..."
-
-# split_lock: bestaetigter Gaming-Gewinn
 sudo tee /etc/sysctl.d/99-gaming.conf >/dev/null <<'EOF'
 kernel.split_lock_mitigate=0
 vm.max_map_count=2147483642
 EOF
 
-# ZRAM: 15% RAM, zstd (dein Standard)
-# Paket selbst installieren — auf der Minimal-Netinstall (Everything-ISO)
-# ist zram-generator nicht garantiert vorhanden; ohne das Paket liest
-# nichts die Config unten, ZRAM bleibt nach dem Reboot stillschweigend aus.
-sudo dnf install -y zram-generator || warn "zram-generator uebersprungen — ZRAM-Config wirkungslos."
+sudo dnf install -y zram-generator || warn "zram-generator uebersprungen."
 sudo tee /etc/systemd/zram-generator.conf >/dev/null <<'EOF'
 [zram0]
 zram-size = ram * 0.15
 compression-algorithm = zstd
 EOF
 
-# Gaming-Env (dein settled Setup)
-# WICHTIG: /etc/profile.d/*.sh wird NUR von Login-Shells eingelesen (bash
-# --login, klassisches TTY-Login) — nicht von grafisch gestarteten Programmen
-# (Steam-Icon-Klick etc. laufen ueber Plasma Login Manager/systemd --user,
-# keine Login-Shell). environment.d ist der systemd-korrekte Weg: wird vom
-# User-Manager beim Session-Start eingelesen, gilt fuer ALLES in der Session,
-# auch GUI-Starts. Syntax ist strikt KEY=VALUE — kein "export", keine
-# Anfuehrungszeichen.
 sudo mkdir -p /etc/environment.d
 sudo tee /etc/environment.d/90-gaming.conf >/dev/null <<'EOF'
 MESA_SHADER_CACHE_MAX_SIZE=12G
@@ -475,42 +380,30 @@ sudo systemctl enable fstrim.timer || warn "fstrim.timer nicht aktivierbar."
 log "sysctl, ZRAM, Env-Variablen, fstrim gesetzt."
 
 # ============================================================================
-# 12. Firewall (firewalld — auf Minimal-Install nicht garantiert vorhanden)
+# 12. Firewall
 # ============================================================================
 info "Richte firewalld ein..."
 sudo dnf install -y firewalld
-sudo systemctl enable --now firewalld || warn "firewalld nicht startbar — nach Reboot pruefen."
-# Default-Zone: public (restriktiv, nur dhcpv6-client + ssh offen).
-# Fuer Desktop ohne SSH-Server kann ssh raus:
+sudo systemctl enable --now firewalld || warn "firewalld nicht startbar."
 sudo firewall-cmd --permanent --zone=public --remove-service=ssh 2>/dev/null || true
-# Netzwerkdrucker-Erkennung (Brother etc., Abschnitt 4d): mDNS fuer Avahi,
-# ipp-client fuer ausgehende/eingehende Druckkommunikation.
 sudo firewall-cmd --permanent --zone=public --add-service=mdns 2>/dev/null || true
 sudo firewall-cmd --permanent --zone=public --add-service=ipp-client 2>/dev/null || true
-# Steam Local Network Game Transfer — bei Bedarf einkommentieren:
-# sudo firewall-cmd --permanent --add-port=27040/tcp
-# sudo firewall-cmd --permanent --add-port=27036/udp
 sudo firewall-cmd --reload 2>/dev/null || true
-log "firewalld aktiv (Zone: public, dicht bis auf DHCPv6)."
+log "firewalld aktiv."
 
 # ============================================================================
-# 13. Fish Shell + Abbreviations (DNF + Flatpak)
+# 13. Fish Shell + Abbreviations
 # ============================================================================
 info "Installiere Fish Shell..."
 sudo dnf install -y fish
-sudo chsh -s /usr/bin/fish "$USER" || warn "Default-Shell nicht gesetzt — manuell: chsh -s /usr/bin/fish"
+sudo chsh -s /usr/bin/fish "$USER" || warn "Default-Shell nicht gesetzt."
 
 mkdir -p "$HOME/.config/fish"
 tee "$HOME/.config/fish/config.fish" >/dev/null <<'EOF'
-# ---------------------------------------------------------------
-# Fish-Konfiguration — Fedora 45 Gaming
-# Abbreviations statt Aliase: expandieren sichtbar in der Zeile,
-# bleiben editierbar und landen sauber in der History.
-# ---------------------------------------------------------------
 if status is-interactive
-    set -g fish_greeting  # Begruessung aus
+    set -g fish_greeting
 
-    # --- Update: DNF + Flatpak in einem Rutsch ---
+    # --- Update ---
     abbr -a up   'sudo dnf upgrade --refresh'
 
     # --- DNF-Basics ---
@@ -520,9 +413,9 @@ if status is-interactive
     abbr -a inf  'dnf info'
     abbr -a li   'dnf list --installed'
     abbr -a hist 'dnf history'
-    abbr -a wp   'dnf provides'          # welches Paket liefert Datei X
+    abbr -a wp   'dnf provides'
 
-    # --- Aufraeumen: DNF + Flatpak ---
+    # --- Aufraeumen ---
     abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages'
 
     # --- Flatpak ---
@@ -536,29 +429,13 @@ if status is-interactive
     abbr -a coproff 'sudo dnf copr disable'
 end
 EOF
-log "Fish installiert, als Default-Shell gesetzt, Abbreviations geschrieben."
-
-# ============================================================================
-# 14. Optional: scx-Scheduler (auskommentiert — bei Bedarf aktivieren)
-# ============================================================================
-# COPR bieszczaders/kernel-cachyos-addons liefert scx-scheds fuer Fedora.
-# sudo dnf copr enable -y bieszczaders/kernel-cachyos-addons
-# sudo dnf install -y scx-scheds
-# Hinweis: falcond ist auf Fedora nicht sauber paketiert — scx_bpfland
-# alternativ direkt per systemd-Service starten (scx.service, /etc/default/scx).
+log "Fish eingerichtet."
 
 # ============================================================================
 # 15. Aufraeumen + Abschluss
 # ============================================================================
-info "Entferne Wine-Desktop-Menuemuell (Notepad/Wordpad/Regedit/WineMine)..."
-# Muss GANZ am Ende passieren: sowohl protontricks (Abschnitt 8) als auch
-# Heroic (Abschnitt 8b, eigene Windows-Spiele-Verwaltung) ziehen wine ueber
-# ihre jeweiligen Requires-Ketten rein. Ein Cleanup direkt nach Steam wuerde
-# von Heroic gleich wieder ueberschrieben. Nimmt "wine" als Ganzes mit (kein
-# Problem, Proton bringt seine eigene Wine-Kopie mit) sowie ungenutzte
-# Recommends-Ketten wie wine-mono (~300 MB .NET-Runtime) und dosbox-staging +
-# fluid-soundfont-gm (~140 MB, DOS-Emulator-Zubehoer).
-sudo dnf remove -y wine-desktop || warn "wine-desktop war nicht installiert oder Entfernen fehlgeschlagen."
+info "Entferne Wine-Desktop-Menuemuell..."
+sudo dnf remove -y wine-desktop || warn "wine-desktop nicht vorhanden oder Entfernen fehlgeschlagen."
 
 sudo dnf autoremove -y || true
 sudo dnf clean packages || true
@@ -568,8 +445,8 @@ log "============================================="
 log " Fertig. Naechste Schritte:"
 log "   1. reboot  ->  Plasma Login Manager / Plasma (Wayland)"
 log "   2. vainfo  ->  H264/HEVC unter VAEntrypointVLD pruefen"
-log "   3. Systemeinstellungen -> Drucker: Brother sollte automatisch auftauchen"
+log "   3. Systemeinstellungen -> Drucker: Brother pruefen"
 log "   4. Steam starten, Proton-GE via ProtonPlus ziehen"
-log "   5. LACT: -70 mV / PL -25% setzen"
-log "   6. Neues Terminal = Fish. 'up' tippen -> expandiert zum Update-Befehl"
+log "   5. LACT: Settings setzen (-70 mV / -25% PL)"
+log "   6. Neues Terminal = Fish ('up' zum Updaten)"
 log "============================================="
