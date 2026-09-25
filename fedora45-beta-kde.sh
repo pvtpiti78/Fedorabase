@@ -130,9 +130,44 @@ log "RPM-Fusion-Updates-Fallback geprueft."
 # -> zieht KEIN System-Wine mehr (aeltere COPR-Builds taten das noch).
 # LACT kommt ebenfalls von hier (kein extra COPR mehr noetig).
 # Faugus bleibt auf der eigenen COPR — NICHT auf Terra verfuegbar (geprueft).
-info "Installiere Terra-Repo..."
-sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${FEDORA_VER}" terra-release || warn "Terra-Repo-Setup fehlgeschlagen."
-log "Terra aktiv."
+info "Pruefe Terra-Verfuegbarkeit fuer Fedora ${FEDORA_VER}..."
+# Terra legt den Branch pro Fedora-Version erst an, wenn Fedora "branched"
+# ist — waehrend der Beta-Phase kann das noch fehlen, oder frisch angelegte
+# Branches sind noch nicht durch alle Mirrors synced (Checksum-Mismatch-
+# Fehler trotz vorhandenem Branch). In beiden Faellen: TEMPORAERER Fallback
+# auf F${PREV_VER}. ACHTUNG: Terra-Pakete sind staerker an glibc/ABI der
+# jeweiligen Fedora-Version gebunden als z.B. RPM-Fusion-Codecs — bei GUI-
+# Apps (ProtonPlus/Heroic/LACT) ueberschaubares Risiko, aber kein genereller
+# Freifahrtschein fuer beliebige Terra-Pakete. Sobald der F${FEDORA_VER}-
+# Branch stabil laeuft: "sudo dnf config-manager setopt terra.metalink=https://tetsudou.fyralabs.com/metalink?repo=terra\$releasever\&arch=\$basearch"
+# zum Zuruecksetzen auf den Standard.
+TERRA_AVAILABLE=0
+TERRA_VER_USED=""
+
+try_terra_install() {
+  local ver="$1"
+  sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${ver}" terra-release
+}
+
+if curl -sf -o /dev/null "https://tetsudou.fyralabs.com/metalink?repo=terra${FEDORA_VER}&arch=x86_64" \
+   && try_terra_install "$FEDORA_VER"; then
+  log "Terra F${FEDORA_VER} aktiv."
+  TERRA_AVAILABLE=1
+  TERRA_VER_USED="$FEDORA_VER"
+else
+  warn "Terra F${FEDORA_VER} nicht nutzbar (Branch fehlt oder Mirror-Sync-Problem) — versuche Fallback auf F${PREV_VER}..."
+  if try_terra_install "$PREV_VER"; then
+    # terra-release legt terra.repo mit dynamischem $releasever an -> wuerde
+    # sofort wieder auf F${FEDORA_VER} zeigen. Explizit auf PREV_VER pinnen.
+    sudo dnf config-manager setopt "terra.metalink=" || true
+    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${PREV_VER}" || true
+    TERRA_AVAILABLE=1
+    TERRA_VER_USED="$PREV_VER"
+    warn "Terra laeuft TEMPORAER auf F${PREV_VER}-Paketen (ABI-Mismatch-Risiko bei einzelnen Paketen). Bei Problemen mit einem Terra-Paket: 'sudo dnf remove <paket>' und Flatpak/GitHub-Release als Alternative."
+  else
+    warn "Terra komplett nicht erreichbar (weder F${FEDORA_VER} noch F${PREV_VER}) — Terra-Pakete werden uebersprungen, Heroic/LACT nutzen ihre Fallbacks weiter unten. ProtonPlus ggf. spaeter manuell via Flatpak (com.vysp3r.ProtonPlus) nachinstallieren."
+  fi
+fi
 
 # ============================================================================
 # 4. Minimal KDE Plasma (Wayland) + Plasma Login Manager
@@ -320,7 +355,11 @@ sudo dnf install -y \
 # sudo dnf install -y gamescope
 
 info "Installiere ProtonPlus (Terra, offiziell gelisteter Distributionskanal)..."
-sudo dnf install -y protonplus || warn "ProtonPlus (Terra) fehlgeschlagen."
+if [[ "$TERRA_AVAILABLE" == "1" ]]; then
+  sudo dnf install -y protonplus || warn "ProtonPlus (Terra) fehlgeschlagen."
+else
+  warn "ProtonPlus uebersprungen (Terra fuer F${FEDORA_VER} noch nicht verfuegbar) — spaeter via Flatpak (com.vysp3r.ProtonPlus, offizieller Hauptkanal laut Upstream) nachinstallieren."
+fi
 log "Steam, Protontricks, ProtonPlus installiert."
 
 # ============================================================================
