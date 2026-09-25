@@ -109,19 +109,19 @@ log "RPM-Fusion-Updates-Fallback geprueft."
 info "Richte Terra-Repository ein..."
 TERRA_AVAILABLE=0
 
-# Prüfen, ob F45 online ist, andernfalls Fallback auf F44
+# Prüfen, ob F45 online ist, andernfalls Fallback auf F44 (Prüfung gegen x86_64 repomd.xml)
 TERRA_TARGET_VER="$FEDORA_VER"
-if ! curl -sf -o /dev/null "https://repos.fyralabs.com/terra${FEDORA_VER}/repodata/repomd.xml"; then
-  warn "Terra F${FEDORA_VER} Metadaten noch nicht online (404) — Fallback auf F${PREV_VER}."
+if ! curl -sf -o /dev/null "https://repos.fyralabs.com/terra${FEDORA_VER}/x86_64/repodata/repomd.xml"; then
+  warn "Terra F${FEDORA_VER} Metadaten noch nicht online — Fallback auf F${PREV_VER}."
   TERRA_TARGET_VER="$PREV_VER"
 fi
 
-# Direkte Repo-Definition (umgeht Metalink-Checksum-Errors & Paket-404)
+# Direkte Repo-Definition mit exakter Arch-Pfadangabe
 info "Schreibe /etc/yum.repos.d/terra.repo (Ziel: Terra F${TERRA_TARGET_VER})..."
 sudo tee /etc/yum.repos.d/terra.repo >/dev/null <<EOF
 [terra]
 name=Terra ${TERRA_TARGET_VER} - \$basearch
-baseurl=https://repos.fyralabs.com/terra${TERRA_TARGET_VER}
+baseurl=https://repos.fyralabs.com/terra${TERRA_TARGET_VER}/\$basearch
 enabled=1
 gpgcheck=0
 skip_if_unavailable=True
@@ -130,9 +130,9 @@ EOF
 sudo dnf clean metadata --repo=terra || true
 if sudo dnf makecache --repo=terra; then
   TERRA_AVAILABLE=1
-  log "Terra (F${TERRA_TARGET_VER}) erfolgreich eingebunden."
+  log "Terra (F${TERRA_TARGET_VER}) erfolgreich synchronisiert und einsatzbereit."
 else
-  warn "Terra makecache fehlgeschlagen — deaktiviere Repo, um Skript nicht zu blockieren."
+  warn "Terra makecache fehlgeschlagen — deaktiviere Repo, um nachfolgende Schritte nicht zu blockieren."
   sudo dnf config-manager setopt terra.enabled=0 || true
 fi
 
@@ -283,10 +283,10 @@ sudo dnf install -y \
   protontricks || warn "Einzelne Gaming-Pakete fehlgeschlagen."
 
 info "Installiere ProtonPlus..."
-if [[ "$TERRA_AVAILABLE" == "1" ]]; then
-  sudo dnf install -y protonplus || warn "ProtonPlus (Terra) fehlgeschlagen."
+if [[ "$TERRA_AVAILABLE" == "1" ]] && sudo dnf install -y --enablerepo=terra protonplus; then
+  log "ProtonPlus (Terra) erfolgreich installiert."
 else
-  warn "ProtonPlus uebersprungen (Terra nicht aktiv) — spaeter via Flatpak nachinstallieren."
+  warn "ProtonPlus via Terra nicht installierbar — spaeter via Flatpak nachinstallieren."
 fi
 log "Steam, Protontricks, ProtonPlus verarbeitet."
 
@@ -294,10 +294,10 @@ log "Steam, Protontricks, ProtonPlus verarbeitet."
 # 8b. Heroic + Faugus Launcher (nativ, kein Flatpak)
 # ============================================================================
 info "Installiere Heroic Games Launcher..."
-if sudo dnf install -y heroic-games-launcher; then
-  log "Heroic installiert."
+if [[ "$TERRA_AVAILABLE" == "1" ]] && sudo dnf install -y --enablerepo=terra heroic-games-launcher; then
+  log "Heroic (Terra) erfolgreich installiert."
 else
-  warn "Heroic fehlgeschlagen — Fallback: RPM direkt vom GitHub-Release."
+  warn "Heroic via Terra nicht installierbar — versuche GitHub-Release Fallback..."
   HEROIC_URL=$(curl -s https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest \
     | grep -oP '"browser_download_url":\s*"\K[^"]*x86_64\.rpm' | head -n1)
   if [[ -n "${HEROIC_URL:-}" ]]; then
@@ -328,10 +328,10 @@ log "Chrome installiert."
 # 10. LACT (GPU-Kontrolle: Undervolt/Powerlimit)
 # ============================================================================
 info "Installiere LACT..."
-if sudo dnf install -y lact; then
-  log "LACT (Terra) installiert."
+if [[ "$TERRA_AVAILABLE" == "1" ]] && sudo dnf install -y --enablerepo=terra lact; then
+  log "LACT (Terra) erfolgreich installiert."
 else
-  warn "Terra-Install fehlgeschlagen — Fallback: COPR ilyaz/LACT..."
+  warn "LACT via Terra nicht installierbar — versuche COPR ilyaz/LACT..."
   sudo dnf copr enable -y ilyaz/LACT && sudo dnf install -y lact || warn "LACT manuell nachinstallieren."
 fi
 sudo systemctl enable lactd 2>/dev/null || warn "lactd-Service nicht aktivierbar — nach Reboot pruefen."
