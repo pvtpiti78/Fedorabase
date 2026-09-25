@@ -8,11 +8,6 @@
 #
 #  Start: als normaler User im tty (sudo-Rechte vorausgesetzt)
 #  Aufruf: bash fedora45-beta-kde.sh
-#
-#  BETA-HINWEIS: RPM Fusion legt die "updates-released-45"-Metadaten
-#  erst mit dem finalen Fedora-45-Release an. Bis dahin faengt Abschnitt 3a
-#  das automatisch ab (Fallback auf Vorversion), damit dnf nicht mit
-#  404-Spam auf den Metalinks haengen bleibt.
 # ============================================================================
 set -euo pipefail
 
@@ -32,10 +27,11 @@ FEDORA_VER=$(rpm -E %fedora)
 info "Fedora $FEDORA_VER erkannt. Los geht's."
 
 # ============================================================================
-# 0. DNF-Metadaten frisch ziehen
+# 0. DNF-Metadaten frisch ziehen & Altlasten bereinigen
 # ============================================================================
-info "Bereinige DNF-Metadaten-Cache und baue neu..."
-sudo dnf clean metadata || true
+info "Bereinige alte Repositories und DNF-Metadaten-Cache..."
+sudo rm -f /etc/yum.repos.d/terra*.repo || true
+sudo dnf clean all || true
 sudo dnf makecache || warn "makecache fehlgeschlagen — Mirrors evtl. traege, Script laeuft trotzdem weiter."
 
 # ============================================================================
@@ -53,12 +49,10 @@ fastestmirror=True
 EOF
 log "dnf.conf geschrieben."
 
-# dnf5-plugins: liefert config-manager & copr — auf Minimal-Installs oft NICHT dabei
+# dnf5-plugins: liefert config-manager & copr
 sudo dnf install -y dnf5-plugins || warn "dnf5-plugins konnte nicht installiert werden."
 
-# Locales — Minimal-Netinstall generiert kein en_US/de_DE, sonst pv-locale-gen-
-# Fehler in der Steam Runtime beim ersten Proton-Start ("character map file
-# 'UTF-8' nicht found").
+# Locales — Minimal-Netinstall generiert kein en_US/de_DE
 info "Installiere Locales (en_US, de_DE)..."
 sudo dnf install -y glibc-langpack-en glibc-langpack-de || warn "Locale-Pakete uebersprungen."
 
@@ -70,14 +64,13 @@ sudo dnf upgrade -y --refresh
 log "System aktuell."
 
 # ============================================================================
-# 3. RPM Fusion (free + nonfree) + F44-Rawhide-Bugfix
+# 3. RPM Fusion (free + nonfree)
 # ============================================================================
 info "Installiere RPM Fusion..."
 sudo dnf install -y \
   "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VER}.noarch.rpm" \
   "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VER}.noarch.rpm"
 
-# --- BUGFIX: Verhindert versehentlich aktive Rawhide-Repos
 info "Korrigiere RPM-Fusion-Repo-Status..."
 for repo in rpmfusion-free rpmfusion-free-updates rpmfusion-nonfree rpmfusion-nonfree-updates; do
   sudo dnf config-manager setopt "${repo}.enabled=1" || warn "Konnte ${repo} nicht aktivieren."
@@ -116,38 +109,31 @@ log "RPM-Fusion-Updates-Fallback geprueft."
 info "Richte Terra-Repository ein..."
 TERRA_AVAILABLE=0
 
-# 1. terra-release direkt per RPM installieren (umgeht DNF5-repofrompath-Bugs)
-TERRA_RPM_URL="https://repos.fyralabs.com/terra${FEDORA_VER}/terra-release.noarch.rpm"
-if ! curl -sf -I "$TERRA_RPM_URL" >/dev/null 2>&1; then
-  warn "Terra F${FEDORA_VER} RPM nicht erreichbar, versuche F${PREV_VER}-Release..."
-  TERRA_RPM_URL="https://repos.fyralabs.com/terra${PREV_VER}/terra-release.noarch.rpm"
+# Prüfen, ob F45 online ist, andernfalls Fallback auf F44
+TERRA_TARGET_VER="$FEDORA_VER"
+if ! curl -sf -o /dev/null "https://repos.fyralabs.com/terra${FEDORA_VER}/repodata/repomd.xml"; then
+  warn "Terra F${FEDORA_VER} Metadaten noch nicht online (404) — Fallback auf F${PREV_VER}."
+  TERRA_TARGET_VER="$PREV_VER"
 fi
 
-if sudo dnf install -y --nogpgcheck "$TERRA_RPM_URL"; then
-  # 2. Checksum-Fix: Metalink deaktivieren und direkt auf Baseurl pinnen.
-  # Verhindert Desync-Fehler von tetsudou-Mirrors während der Beta.
-  info "Konfiguriere Terra-Repo-Pfade (Bypass fuer Metalink-Sync-Fehler)..."
-  sudo dnf config-manager setopt terra.metalink="" 2>/dev/null || true
-  
-  if curl -sf -o /dev/null "https://repos.fyralabs.com/terra${FEDORA_VER}/repodata/repomd.xml"; then
-    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${FEDORA_VER}" || true
-    log "Terra F${FEDORA_VER} via Direktanbindung aktiv."
-  else
-    warn "Terra F${FEDORA_VER} noch leer/unvollständig — Fallback auf F${PREV_VER} Baseurl."
-    sudo dnf config-manager setopt "terra.baseurl=https://repos.fyralabs.com/terra${PREV_VER}" || true
-  fi
+# Direkte Repo-Definition (umgeht Metalink-Checksum-Errors & Paket-404)
+info "Schreibe /etc/yum.repos.d/terra.repo (Ziel: Terra F${TERRA_TARGET_VER})..."
+sudo tee /etc/yum.repos.d/terra.repo >/dev/null <<EOF
+[terra]
+name=Terra ${TERRA_TARGET_VER} - \$basearch
+baseurl=https://repos.fyralabs.com/terra${TERRA_TARGET_VER}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=True
+EOF
 
-  # Metadaten-Cache für Terra frisch erzwingen
-  sudo dnf clean metadata --repo=terra || true
-  if sudo dnf makecache --repo=terra; then
-    TERRA_AVAILABLE=1
-    log "Terra erfolgreich synchronisiert."
-  else
-    warn "Terra makecache fehlgeschlagen — wird vorerst deaktiviert."
-    sudo dnf config-manager setopt terra.enabled=0 || true
-  fi
+sudo dnf clean metadata --repo=terra || true
+if sudo dnf makecache --repo=terra; then
+  TERRA_AVAILABLE=1
+  log "Terra (F${TERRA_TARGET_VER}) erfolgreich eingebunden."
 else
-  warn "terra-release konnte nicht installiert werden. Fallbacks greifen automatisch."
+  warn "Terra makecache fehlgeschlagen — deaktiviere Repo, um Skript nicht zu blockieren."
+  sudo dnf config-manager setopt terra.enabled=0 || true
 fi
 
 # ============================================================================
