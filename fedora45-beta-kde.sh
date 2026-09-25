@@ -146,10 +146,24 @@ TERRA_VER_USED=""
 
 try_terra_install() {
   local ver="$1"
+  # Etwaige Repo-Leiche vorher entfernen: --repofrompath definiert die
+  # temporaere ID "terra" fuer diesen Aufruf. Existiert parallel schon eine
+  # PERMANENTE terra.repo mit derselben ID (aus vorherigem Lauf oder
+  # manueller Installation), lehnt dnf5 die doppelte ID ab und der ganze
+  # Befehl schlaegt fehl — sieht dann wie "Terra nicht erreichbar" aus,
+  # obwohl die bestehende Konfiguration in Wahrheit einwandfrei laeuft.
+  sudo rm -f /etc/yum.repos.d/terra*.repo
   sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${ver}" terra-release
 }
 
-if curl -sf -o /dev/null "https://tetsudou.fyralabs.com/metalink?repo=terra${FEDORA_VER}&arch=x86_64" \
+if rpm -q terra-release &>/dev/null; then
+  # terra-release ist schon da (vorheriger Lauf / manuell installiert) —
+  # NICHT per --repofrompath neu definieren (ID-Kollision, siehe oben),
+  # sondern die vorhandene, bereits funktionierende Konfiguration nutzen.
+  info "terra-release bereits vorhanden — uebernehme bestehende Konfiguration statt Neu-Setup."
+  TERRA_AVAILABLE=1
+  TERRA_VER_USED="(bestehende Konfiguration)"
+elif curl -sf -o /dev/null "https://tetsudou.fyralabs.com/metalink?repo=terra${FEDORA_VER}&arch=x86_64" \
    && try_terra_install "$FEDORA_VER"; then
   log "Terra F${FEDORA_VER} aktiv."
   TERRA_AVAILABLE=1
