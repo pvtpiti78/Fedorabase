@@ -78,14 +78,22 @@ for repo in rpmfusion-free rpmfusion-nonfree; do
   sudo dnf config-manager setopt "${repo}.enabled=1" || warn "Konnte ${repo} nicht aktivieren."
 done
 
-# 2. Updates-Repos aktivieren, ABER mit skip_if_unavailable=1 absichern!
-#    Hintergrund: In einer Fedora-Beta existiert 'updates-released-XX' auf den
-#    Mirrors noch nicht (404). Mit skip_if_unavailable=1 direkt am Repo
-#    ignoriert DNF5 den 404 in der Beta und nutzt das Repo automatisch,
-#    sobald Fedora 45 final released ist.
-for repo in rpmfusion-free-updates rpmfusion-nonfree-updates; do
-  sudo dnf config-manager setopt "${repo}.enabled=1" "${repo}.skip_if_unavailable=1" || true
-done
+# 2. Updates-Repos nur aktivieren, wenn 'updates-released' für diese Fedora-Version
+#    auf den Mirrors schon existiert (verhindert endlosen 404-Spam in der Beta-Phase!):
+if curl -fsI "https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-${FEDORA_VER}&arch=x86_64" >/dev/null 2>&1; then
+  info "Final-Release erkannt: Aktiviere reguläre RPM-Fusion Updates-Repos..."
+  for repo in rpmfusion-free-updates rpmfusion-nonfree-updates; do
+    sudo dnf config-manager setopt "${repo}.enabled=1" || true
+  done
+else
+  info "Beta/Branched erkannt (updates-released-${FEDORA_VER} noch 404): Nutze updates-testing..."
+  for repo in rpmfusion-free-updates rpmfusion-nonfree-updates; do
+    sudo dnf config-manager setopt "${repo}.enabled=0" || true
+  done
+  for repo in rpmfusion-free-updates-testing rpmfusion-nonfree-updates-testing; do
+    sudo dnf config-manager setopt "${repo}.enabled=1" || true
+  done
+fi
 
 # 3. Rawhide-Repos sicherheitshalber deaktivieren
 for repo in rpmfusion-free-rawhide rpmfusion-nonfree-rawhide; do
