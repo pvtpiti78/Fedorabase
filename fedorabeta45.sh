@@ -78,10 +78,10 @@ for repo in rpmfusion-free rpmfusion-nonfree; do
   sudo dnf config-manager setopt "${repo}.enabled=1" || warn "Konnte ${repo} nicht aktivieren."
 done
 
-# 2. Updates-Repos nur aktivieren, wenn 'updates-released' für diese Fedora-Version
+# 2. Updates-Repos nur aktivieren, wenn 'updates-released' fuer diese Fedora-Version
 #    auf den Mirrors schon existiert (verhindert endlosen 404-Spam in der Beta-Phase!):
 if curl -fsI "https://mirrors.rpmfusion.org/metalink?repo=free-fedora-updates-released-${FEDORA_VER}&arch=x86_64" >/dev/null 2>&1; then
-  info "Final-Release erkannt: Aktiviere reguläre RPM-Fusion Updates-Repos..."
+  info "Final-Release erkannt: Aktiviere regulaeere RPM-Fusion Updates-Repos..."
   for repo in rpmfusion-free-updates rpmfusion-nonfree-updates; do
     sudo dnf config-manager setopt "${repo}.enabled=1" || true
   done
