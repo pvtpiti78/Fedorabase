@@ -65,19 +65,29 @@ sudo dnf upgrade -y --refresh
 log "System aktuell."
 
 # ============================================================================
-# 3. RPM Fusion (free + nonfree) + Rawhide-Bugfix
+# 3. RPM Fusion (free + nonfree) + Beta/Branched-sicherer Repo-Fix
 # ============================================================================
 info "Installiere RPM Fusion..."
 sudo dnf install -y \
   "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VER}.noarch.rpm" \
   "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VER}.noarch.rpm"
 
-# --- BUGFIX (Stand F44/Beta): Release-Paket aktiviert faelschlich die Rawhide-Repos
-#     und laesst die richtigen Repos deaktiviert -> glibc-Konflikte.
-info "Korrigiere RPM-Fusion-Repo-Status..."
-for repo in rpmfusion-free rpmfusion-free-updates rpmfusion-nonfree rpmfusion-nonfree-updates; do
+info "Konfiguriere RPM-Fusion-Repos (Beta- & Release-sicher)..."
+# 1. Basis-Repos aktivieren (existieren sowohl in Beta/Branched als auch im Final Release)
+for repo in rpmfusion-free rpmfusion-nonfree; do
   sudo dnf config-manager setopt "${repo}.enabled=1" || warn "Konnte ${repo} nicht aktivieren."
 done
+
+# 2. Updates-Repos aktivieren, ABER mit skip_if_unavailable=1 absichern!
+#    Hintergrund: In einer Fedora-Beta existiert 'updates-released-XX' auf den
+#    Mirrors noch nicht (404). Mit skip_if_unavailable=1 direkt am Repo
+#    ignoriert DNF5 den 404 in der Beta und nutzt das Repo automatisch,
+#    sobald Fedora 45 final released ist.
+for repo in rpmfusion-free-updates rpmfusion-nonfree-updates; do
+  sudo dnf config-manager setopt "${repo}.enabled=1" "${repo}.skip_if_unavailable=1" || true
+done
+
+# 3. Rawhide-Repos sicherheitshalber deaktivieren
 for repo in rpmfusion-free-rawhide rpmfusion-nonfree-rawhide; do
   sudo dnf config-manager setopt "${repo}.enabled=0" 2>/dev/null || true
 done
