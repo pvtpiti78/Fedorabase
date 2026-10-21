@@ -60,14 +60,18 @@ log "System aktuell."
 # ============================================================================
 # 3. RPM Fusion (free + nonfree)
 # ============================================================================
-# Die Release-RPMs bringen die Repos mit Standard-Einstellungen mit:
-# free/nonfree + updates an, updates-testing aus. Nichts davon muss von Hand
-# umgeschaltet werden. Tainted wird nicht gebraucht (nichts daraus installiert).
+# Die Release-RPMs bringen free/nonfree (+ updates ab Release) mit. Vor dem
+# finalen Fedora-Release liefert das RPM updates-testing teils AKTIVIERT aus —
+# darum unten explizit abschalten (sonst Mesa-/freeworld-Mismatch moeglich).
+# Tainted wird nicht gebraucht (nichts daraus installiert).
 info "Installiere RPM Fusion..."
 sudo dnf install -y \
   "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VER}.noarch.rpm" \
   "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VER}.noarch.rpm"
-log "RPM Fusion eingerichtet."
+for repo in rpmfusion-free-updates-testing rpmfusion-nonfree-updates-testing; do
+  sudo dnf config-manager setopt "${repo}.enabled=0" || warn "Konnte ${repo} nicht abschalten."
+done
+log "RPM Fusion eingerichtet (Testing-Repos aus)."
 
 # ============================================================================
 # 3b. Terra (rolling-release Community-Repo, Fyra Labs)
@@ -180,7 +184,8 @@ log "CUPS + Avahi aktiv — Firewall-Freigabe folgt in Abschnitt 14."
 # ============================================================================
 info "Wechsle auf volles ffmpeg (RPM Fusion)..."
 sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing || \
-  sudo dnf install -y ffmpeg --allowerasing
+  sudo dnf install -y ffmpeg --allowerasing || \
+  warn "ffmpeg (RPM Fusion) fehlgeschlagen — spaeter nachholen: sudo dnf swap ffmpeg-free ffmpeg --allowerasing"
 
 info "Installiere GStreamer-Codecs..."
 sudo dnf install -y --setopt=install_weak_deps=False \
@@ -195,10 +200,14 @@ sudo dnf install -y --setopt=install_weak_deps=False \
   || warn "Einzelne GStreamer-Pakete fehlgeschlagen — Namen pruefen."
 
 info "VA-API Freeworld-Swap (H.264/H.265 Hardware-Decode fuer RDNA4)..."
+# freeworld muss exakt zur Fedora-Mesa-Version passen. Bei Mismatch (Fedora
+# schneller als RPM Fusion) nur warnen — Rest des Scripts laeuft weiter.
 if rpm -q mesa-va-drivers >/dev/null 2>&1; then
-  sudo dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld
+  sudo dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
+    || warn "freeworld-Swap fehlgeschlagen (Mesa-Mismatch?) — spaeter nachholen: sudo dnf swap mesa-va-drivers mesa-va-drivers-freeworld"
 else
-  sudo dnf install -y mesa-va-drivers-freeworld
+  sudo dnf install -y mesa-va-drivers-freeworld \
+    || warn "freeworld fehlgeschlagen (Mesa-Mismatch?) — spaeter nachholen: sudo dnf install mesa-va-drivers-freeworld"
 fi
 # 32-bit fuer Steam/Proton
 sudo dnf install -y mesa-va-drivers-freeworld.i686 || warn "32-bit VA-API uebersprungen."
@@ -209,12 +218,16 @@ log "Codecs + Hardware-Decode eingerichtet."
 # 9. AMD Gaming-Grundlage (Vulkan 64+32 bit)
 # ============================================================================
 info "Installiere Vulkan-Stack..."
+# Architektur explizit angeben + Check: Nach einem Durchlauf auf F45 fehlte die
+# x86_64-Variante von mesa-vulkan-drivers (Ursache ungeklaert), der Vulkan-Loader
+# fand dann keinen Treiber ("Found no drivers"). Der Check unten faengt das ab.
 sudo dnf install -y \
-  mesa-vulkan-drivers \
+  mesa-vulkan-drivers.x86_64 \
   mesa-vulkan-drivers.i686 \
-  vulkan-loader \
+  vulkan-loader.x86_64 \
   vulkan-loader.i686 \
   vulkan-tools
+rpm -q mesa-vulkan-drivers.x86_64 >/dev/null 2>&1 || warn "mesa-vulkan-drivers (x86_64) fehlt — sudo dnf install mesa-vulkan-drivers.x86_64"
 log "RADV 64/32-bit bereit. (RX 9070 XT laeuft out-of-the-box ueber Mesa.)"
 
 # ============================================================================
