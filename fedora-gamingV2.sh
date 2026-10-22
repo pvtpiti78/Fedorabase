@@ -456,4 +456,31 @@ log "Fish installiert, als Default-Shell gesetzt, Abbreviations geschrieben."
 # ============================================================================
 # 14. Optional: scx-Scheduler (auskommentiert — bei Bedarf aktivieren)
 # ============================================================================
-# sudo dnf copr ena
+# sudo dnf copr enable -y bieszczaders/kernel-cachyos-addons || \
+#   sudo dnf copr enable -y bieszczaders/kernel-cachyos-addons fedora-44-x86_64
+# sudo dnf install -y scx-scheds
+
+# ============================================================================
+# 15. Aufraeumen + Abschluss
+# ============================================================================
+info "Pruefe auf eventuellen Wine-Desktop-Menuemuell..."
+# Da protontricks raus ist und Heroic/Faugus ueber Terra 'umu-launcher' nutzen,
+# sollte wine-desktop gar nicht erst installiert sein — falls doch, fliegt es hier raus:
+if rpm -q wine-desktop >/dev/null 2>&1; then
+  sudo dnf remove -y wine-desktop || true
+fi
+
+sudo dnf autoremove -y || true
+sudo dnf clean packages || true
+
+echo
+log "============================================="
+log " Fertig (Fedora ${FEDORA_VER}). Naechste Schritte:"
+log "   1. reboot   -> Plasma Login Manager / Plasma (Wayland)"
+log "   2. vainfo   -> H264/HEVC unter VAEntrypointVLD pruefen"
+log "                  (Nach Release-Unfreeze: 'rpmup' & 'mesafix' in Fish tippen)"
+log "   3. Drucker  -> Systemeinstellungen -> Drucker (Brother via Avahi/IPP)"
+log "   4. Steam    -> Starten, Proton-GE via ProtonPlus ziehen"
+log "   5. LACT     -> -70 mV / PL -25% setzen"
+log "   6. Terminal -> Fish aktiv ('up' = Update)"
+log "============================================="
