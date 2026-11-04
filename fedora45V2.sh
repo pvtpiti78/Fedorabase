@@ -427,7 +427,8 @@ if status is-interactive
     abbr -a clean 'sudo dnf autoremove -y; and sudo dnf clean packages'
 
     # --- AppMan (AppImages) ---
-    abbr -a amin  'appman -i'            # AppImage installieren
+    abbr -a amin  'appman -i'            # AppImage aus DB installieren
+    abbr -a aml   'appman --launcher'    # Lokales AppImage einbinden (Desktop-Entry + ~/Applications)
     abbr -a amup  'appman -u'            # Alle AppImages updaten
     abbr -a amse  'appman -q'            # In AppMan-DB suchen
     abbr -a amrem 'appman -r'            # AppImage entfernen
