@@ -199,9 +199,9 @@ log "CUPS + Avahi aktiv — Drucker sollte automatisch in Systemeinstellungen ->
 info "Installiere & synchronisiere Mesa/Vulkan-Stack (64-bit & 32-bit)..."
 # Temporaer mit --enablerepo=updates-testing, damit 64/32-bit Mesa exakt zum
 # 26.2.6er Stand von rpmfusion-free-updates (mesa-va-drivers-freeworld) passt:
-sudo dnf upgrade -y --enablerepo=updates-testing "mesa-*" || true
+sudo dnf upgrade -y || true
 
-sudo dnf install -y --enablerepo=updates-testing \
+sudo dnf install -y \
   mesa-vulkan-drivers.x86_64 \
   mesa-vulkan-drivers.i686 \
   mesa-dri-drivers.x86_64 \
