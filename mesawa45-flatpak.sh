@@ -377,7 +377,7 @@ EOF
 # Gaming-Env (systemd environment.d fuer volle Wayland/GUI-Session-Abdeckung)
 sudo mkdir -p /etc/environment.d
 sudo tee /etc/environment.d/90-gaming.conf >/dev/null <<'EOF'
-MESA_SHADER_CACHE_MAX_SIZE=12G
+MESA_SHADER_CACHE_MAX_SIZE=96G
 PROTON_ENABLE_HDR=1
 PROTON_USE_OPTISCALER=0
 PROTON_FSR4_UPGRADE=1
