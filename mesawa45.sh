@@ -194,18 +194,26 @@ sudo systemctl enable --now avahi-daemon.service || warn "avahi-daemon nicht akt
 log "CUPS + Avahi aktiv — Drucker sollte automatisch in Systemeinstellungen -> Drucker auftauchen."
 
 # ============================================================================
-# 6. AMD Gaming-Grundlage (Vulkan 64+32 bit — explizit .x86_64 & .i686 fuer DNF5!)
+# Pre5. AMD Gaming-Grundlage (Vulkan & Mesa 64+32 bit vorab synchronisieren!)
 # ============================================================================
-info "Installiere Vulkan-Stack (64-bit & 32-bit)..."
-sudo dnf upgrade -y --enablerepo=updates-testing 'mesa*' && sudo dnf install -y --allowerasing mesa-va-drivers-freeworld.x86_64 mesa-va-drivers-freeworld.i686
+info "Installiere & synchronisiere Mesa/Vulkan-Stack (64-bit & 32-bit)..."
+# Temporaer mit --enablerepo=updates-testing, damit 64/32-bit Mesa exakt zum
+# 26.2.6er Stand von rpmfusion-free-updates (mesa-va-drivers-freeworld) passt:
+sudo dnf upgrade -y --enablerepo=updates-testing "mesa-*" || true
 
-sudo dnf install -y \
+sudo dnf install -y --enablerepo=updates-testing \
   mesa-vulkan-drivers.x86_64 \
   mesa-vulkan-drivers.i686 \
+  mesa-dri-drivers.x86_64 \
+  mesa-dri-drivers.i686 \
+  mesa-libGL.x86_64 \
+  mesa-libGL.i686 \
+  mesa-libEGL.x86_64 \
+  mesa-libEGL.i686 \
   vulkan-loader.x86_64 \
   vulkan-loader.i686 \
   vulkan-tools
-log "RADV 64/32-bit bereit. (RX 9070 XT laeuft out-of-the-box ueber Mesa.)"
+log "RADV & Mesa 64/32-bit synchron auf 26.2.6 bereit."
 
 # ============================================================================
 # 5. Multimedia: Full ffmpeg + GStreamer + VA-API (AMD Freeworld)
